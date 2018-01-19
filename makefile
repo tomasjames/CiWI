@@ -1,2 +1,2 @@
-ciwi: ciwi.f
-	ifort -o ciwi ciwi.f
+ciwi: ciwi.f90
+	gfortran -o ciwi ciwi.f90
