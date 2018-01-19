@@ -1,5 +1,6 @@
 language: fortran
-script:
-  - sudo dpkg --add-architecture i386
+before_install:
   - sudo apt-get update
+  - sudo apt-get gfortran
+script:
   - make ciwi
