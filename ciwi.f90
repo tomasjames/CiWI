@@ -10,16 +10,16 @@
       IMPLICIT NONE ! Ensures that implicit types are ignored
       CHARACTER*11 :: DGFILE,RELUFILE,RHOEFILE,RHOGFILE,RHOIFILE, &
             RHONFILE,TEEFILE,TEIFILE,TENFILE,TRACKFILE,ZGFILE
-      INTEGER :: i,j,numfiles,numelem
+      INTEGER :: i,j,k,numfiles,numelem
       REAL :: a
-      INTEGER, PARAMETER :: filelength=2331
+      INTEGER, PARAMETER :: filelength=2331,interpLength=3000
       DOUBLE PRECISION :: T1,T2
       DOUBLE PRECISION :: T(filelength),DG(filelength),RELU(filelength), &
             RHOE(filelength),RHOG(filelength),RHOI(filelength),RHON(filelength), &
             TEE(filelength),TEI(filelength),TEN(filelength), X(filelength), &
             Y(filelength),ZG(filelength)
 
-      DOUBLE PRECISION, PARAMETER :: L_BOUND=0, U_BOUND=3e10
+      DOUBLE PRECISION, PARAMETER :: L_BOUND=0, U_BOUND=2.33e+10
       DOUBLE PRECISION, DIMENSION(filelength) :: T_INTERP,DG_INTERP
 
 !---------------------------- INPUT PARAMETERS --------------------------------
@@ -93,32 +93,34 @@
             END IF
       END DO
 
-      DO j=1,filelength
-            WRITE(14,*) 'T_INTERP(j): ', T_INTERP(j)
-            WRITE(14,*) 'T(j): ', T(j)
-            WRITE(14,*) 'T(j+1): ', T(j+1)
-            ! Assess to determine whether point sits in specified range 
-            IF (T_INTERP(j) > T(j) .AND. T_INTERP(j) < T(j+1)) THEN
-                  WRITE(14,*) 'T_INTERP(j) > T(j) .AND. T_INTERP(j) < T(j+1)'
-                  T1 = T(j)
-                  T2 = T(j+1)
+      DO k=1,interpLength
+            DO j=1,filelength
+                  WRITE(14,*) 'T_INTERP(k): ', T_INTERP(k)
+                  WRITE(14,*) 'T(j): ', T(j)
+                  WRITE(14,*) 'T(j+1): ', T(j+1)
+                  ! Assess to determine whether point sits in specified range 
+                  IF (T_INTERP(k) > T(j) .AND. T_INTERP(k) < T(j+1)) THEN
+                        WRITE(14,*) 'T_INTERP(k) > T(k) .AND. T_INTERP(j) < T(j+1)'
+                        T1 = T(j)
+                        T2 = T(j+1)
 
-                  DG_INTERP(j) = DG(j) + (T_INTERP(j)-T1)*((DG(j+1)-DG(j))/(T2-T1))
-                  WRITE(13,*) T_INTERP(j),DG_INTERP(j)
-            ELSE IF (T_INTERP(j) < T(j)) THEN
-                  WRITE(14,*) 'T_INTERP(j) < T(j)'
-                  T1 = T_INTERP(j)
-                  T2 = T(j)
+                        DG_INTERP(k) = DG(j) + (T_INTERP(k)-T1)*((DG(j+1)-DG(j))/(T2-T1))
+                        WRITE(13,*) T_INTERP(k),DG_INTERP(k)
+                  ELSE IF (T_INTERP(k) < T(1)) THEN
+                        WRITE(14,*) 'T_INTERP(k) < T(j)'
+                        T1 = T_INTERP(k)
+                        T2 = T(1)
 
-                  DG_INTERP(j) = DG(j) + (T_INTERP(j)-T1)*((DG(j+1)-DG(j))/(T2-T1))
-                  WRITE(13,*) T_INTERP(j),DG_INTERP(j)
-            ELSE IF (T_INTERP(j) > T(j)) THEN
-                  WRITE(14,*) 'T_INTERP(j) > T(j)'
-                  T1 = T(j)
-                  T2 = T_INTERP(j)
+                        DG_INTERP(k) = DG(j) + (T_INTERP(k)-T1)*((DG(j+1)-DG(j))/(T2-T1))
+                        WRITE(13,*) T_INTERP(k),DG_INTERP(k)
+                  ELSE IF (T_INTERP(k) > T(filelength)) THEN
+                        WRITE(14,*) 'T_INTERP(k) > T(j)'
+                        T1 = T(filelength)
+                        T2 = T_INTERP(k)
 
-                  DG_INTERP(j) = DG(j) + (T_INTERP(j)-T1)*((DG(j+1)-DG(j))/(T2-T1))
-                  WRITE(13,*) T_INTERP(j),DG_INTERP(j)
-            END IF
+                        DG_INTERP(k) = DG(j) + (T_INTERP(k)-T1)*((DG(j+1)-DG(j))/(T2-T1))
+                        WRITE(13,*) T_INTERP(k),DG_INTERP(k)
+                  END IF
+            END DO
       END DO
  END
