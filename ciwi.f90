@@ -5,7 +5,7 @@
 ! CIWI: Chemistry In the Wardle Instability
 !
 !------------------------------------------------------------------------------
-      USE interpolate
+      USE interp
 
       IMPLICIT NONE ! Ensures that implicit types are ignored
       CHARACTER*11 :: DGFILE,RELUFILE,RHOEFILE,RHOGFILE,RHOIFILE, &
@@ -93,34 +93,34 @@
             END IF
       END DO
 
-      DO k=1,interpLength
-            DO j=1,filelength
-                  WRITE(14,*) 'T_INTERP(k): ', T_INTERP(k)
-                  WRITE(14,*) 'T(j): ', T(j)
-                  WRITE(14,*) 'T(j+1): ', T(j+1)
-                  ! Assess to determine whether point sits in specified range 
-                  IF (T_INTERP(k) > T(j) .AND. T_INTERP(k) < T(j+1)) THEN
-                        WRITE(14,*) 'T_INTERP(k) > T(k) .AND. T_INTERP(j) < T(j+1)'
-                        T1 = T(j)
-                        T2 = T(j+1)
-
-                        DG_INTERP(k) = DG(j) + (T_INTERP(k)-T1)*((DG(j+1)-DG(j))/(T2-T1))
-                        WRITE(13,*) T_INTERP(k),DG_INTERP(k)
-                  ELSE IF (T_INTERP(k) < T(1)) THEN
-                        WRITE(14,*) 'T_INTERP(k) < T(j)'
-                        T1 = T_INTERP(k)
-                        T2 = T(1)
-
-                        DG_INTERP(k) = DG(j) + (T_INTERP(k)-T1)*((DG(j+1)-DG(j))/(T2-T1))
-                        WRITE(13,*) T_INTERP(k),DG_INTERP(k)
-                  ELSE IF (T_INTERP(k) > T(filelength)) THEN
-                        WRITE(14,*) 'T_INTERP(k) > T(j)'
-                        T1 = T(filelength)
-                        T2 = T_INTERP(k)
-
-                        DG_INTERP(k) = DG(j) + (T_INTERP(k)-T1)*((DG(j+1)-DG(j))/(T2-T1))
-                        WRITE(13,*) T_INTERP(k),DG_INTERP(k)
-                  END IF
-            END DO
-      END DO
- END
+      CALL linear_interp(T_INTERP=T_INTERP,T=T,Y=DG, &
+            DATAFILE='dg_interp.dat',interpLength=interpLength, &
+            filelength=filelength)
+      CALL linear_interp(T_INTERP=T_INTERP,T=T,Y=RELU, &
+            DATAFILE='relu_interp.dat',interpLength=interpLength, &
+            filelength=filelength)
+      CALL linear_interp(T_INTERP=T_INTERP,T=T,Y=RHOE, &
+            DATAFILE='rhoe_interp.dat',interpLength=interpLength, &
+            filelength=filelength)
+      CALL linear_interp(T_INTERP=T_INTERP,T=T,Y=RHOG, &
+            DATAFILE='rhog_interp.dat',interpLength=interpLength, &
+            filelength=filelength)
+      CALL linear_interp(T_INTERP=T_INTERP,T=T,Y=RHOI, &
+            DATAFILE='rhoi_interp.dat',interpLength=interpLength, &
+            filelength=filelength)
+      CALL linear_interp(T_INTERP=T_INTERP,T=T,Y=RHON, &
+            DATAFILE='rhon_interp.dat',interpLength=interpLength, &
+            filelength=filelength)
+      CALL linear_interp(T_INTERP=T_INTERP,T=T,Y=TEE, &
+            DATAFILE='tee_interp.dat',interpLength=interpLength, &
+            filelength=filelength)
+      CALL linear_interp(T_INTERP=T_INTERP,T=T,Y=TEI, &
+            DATAFILE='tei_interp.dat',interpLength=interpLength, &
+            filelength=filelength)
+      CALL linear_interp(T_INTERP=T_INTERP,T=T,Y=TEN, &
+            DATAFILE='ten_interp.dat',interpLength=interpLength, &
+            filelength=filelength)
+      CALL linear_interp(T_INTERP=T_INTERP,T=T,Y=ZG, &
+            DATAFILE='zg_interp.dat',interpLength=interpLength, &
+            filelength=filelength)
+ END PROGRAM

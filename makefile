@@ -1,8 +1,8 @@
-ciwi: interpolate.o ciwi.f90
-	gfortran -o ciwi interpolate.o ciwi.f90
+ciwi: interp.o ciwi.f90
+	gfortran -o ciwi interp.o ciwi.f90
 
-interpolate.o: interpolate.f90
-	gfortran -c interpolate.f90
+interp.o: interp.f90
+	gfortran -c interp.f90
 
 clean: 
 	rm *.o *.mod ciwi
