@@ -6,28 +6,21 @@
 !
 !------------------------------------------------------------------------------
       USE interp
-      USE params
 
       IMPLICIT NONE ! Ensures that implicit types are ignored
-      CHARACTER(5) :: DGFILE,ZGFILE
-      CHARACTER(6) :: TEEFILE,TEIFILE,TENFILE
-      CHARACTER(7) :: RELUFILE,RHOEFILE,RHOGFILE,RHOIFILE, &
-            RHONFILE
-      CHARACTER(8) :: TRACKFILE
+      CHARACTER*11 :: DGFILE,RELUFILE,RHOEFILE,RHOGFILE,RHOIFILE, &
+            RHONFILE,TEEFILE,TEIFILE,TENFILE,TRACKFILE,ZGFILE
       INTEGER :: i,j,k,numfiles,numelem
       REAL :: a
       INTEGER, PARAMETER :: filelength=2331,interpLength=3000
       DOUBLE PRECISION :: T1,T2
-      DOUBLE PRECISION, DIMENSION(filelength) :: T,DG,RELU,RHOE,RHOG, &
-            RHOI,RHON,TEE,TEI,TEN,X,Y,ZG
+      DOUBLE PRECISION :: T(filelength),DG(filelength),RELU(filelength), &
+            RHOE(filelength),RHOG(filelength),RHOI(filelength),RHON(filelength), &
+            TEE(filelength),TEI(filelength),TEN(filelength), X(filelength), &
+            Y(filelength),ZG(filelength)
 
-      DOUBLE PRECISION, PARAMETER :: L_BOUND=0, U_BOUND=2.330015E10
-      DOUBLE PRECISION, DIMENSION(interpLength) :: T_INTERP,DG_INTERP,RELU_INTERP, &
-            RHOE_INTERP,RHOG_INTERP,RHOI_INTERP,RHON_INTERP,TEE_INTERP,TEI_INTERP, &
-            TEN_INTERP,ZG_INTERP
-
-      DOUBLE PRECISION :: DG_RETURN,RELU_RETURN,RHOE_RETURN,RHOG_RETURN,RHOI_RETURN, &
-            RHON_RETURN,TEE_RETURN,TEI_RETURN,TEN_RETURN,ZG_RETURN
+      DOUBLE PRECISION, PARAMETER :: L_BOUND=0, U_BOUND=2.33e+10
+      DOUBLE PRECISION, DIMENSION(filelength) :: T_INTERP,DG_INTERP
 
 !---------------------------- INPUT PARAMETERS --------------------------------
       ! I/O files
@@ -90,60 +83,44 @@
 
 !--------------------------------- INTERPOLATE ----------------------------------
       ! Need to create an array of times to interpolate at
-      DO i=1,interpLength
-            IF (i == 1) THEN
+      DO i=1,filelength
+            IF (i .eq. 1) THEN
                   T_INTERP(i) = L_BOUND
-            ELSE IF (i == interpLength) THEN
+            ELSE IF (i .eq. filelength) THEN
                   T_INTERP(i) = U_BOUND
             ELSE 
-                  T_INTERP(i) = T_INTERP(i-1) + (U_BOUND - L_BOUND)/(interpLength)
+                  T_INTERP(i) = T_INTERP(i-1) + (U_BOUND - L_BOUND)/(filelength)
             END IF
       END DO
 
-      ! Call the function for each parameter to be interpolated
-      ! NOTE: function will return an array of Y_INTERP values
       CALL linear_interp(T_INTERP=T_INTERP,T=T,Y=DG, &
             DATAFILE='dg_interp.dat',interpLength=interpLength, &
-            filelength=filelength,Y_INTERP=DG_INTERP)
+            filelength=filelength)
       CALL linear_interp(T_INTERP=T_INTERP,T=T,Y=RELU, &
             DATAFILE='relu_interp.dat',interpLength=interpLength, &
-            filelength=filelength,Y_INTERP=RELU_INTERP)
+            filelength=filelength)
       CALL linear_interp(T_INTERP=T_INTERP,T=T,Y=RHOE, &
             DATAFILE='rhoe_interp.dat',interpLength=interpLength, &
-            filelength=filelength,Y_INTERP=RHOE_INTERP)
+            filelength=filelength)
       CALL linear_interp(T_INTERP=T_INTERP,T=T,Y=RHOG, &
             DATAFILE='rhog_interp.dat',interpLength=interpLength, &
-            filelength=filelength,Y_INTERP=RHOG_INTERP)
+            filelength=filelength)
       CALL linear_interp(T_INTERP=T_INTERP,T=T,Y=RHOI, &
             DATAFILE='rhoi_interp.dat',interpLength=interpLength, &
-            filelength=filelength,Y_INTERP=RHOI_INTERP)
+            filelength=filelength)
       CALL linear_interp(T_INTERP=T_INTERP,T=T,Y=RHON, &
             DATAFILE='rhon_interp.dat',interpLength=interpLength, &
-            filelength=filelength,Y_INTERP=RHON_INTERP)
+            filelength=filelength)
       CALL linear_interp(T_INTERP=T_INTERP,T=T,Y=TEE, &
             DATAFILE='tee_interp.dat',interpLength=interpLength, &
-            filelength=filelength,Y_INTERP=TEE_INTERP)
+            filelength=filelength)
       CALL linear_interp(T_INTERP=T_INTERP,T=T,Y=TEI, &
             DATAFILE='tei_interp.dat',interpLength=interpLength, &
-            filelength=filelength,Y_INTERP=TEI_INTERP)
+            filelength=filelength)
       CALL linear_interp(T_INTERP=T_INTERP,T=T,Y=TEN, &
             DATAFILE='ten_interp.dat',interpLength=interpLength, &
-            filelength=filelength,Y_INTERP=TEN_INTERP)
+            filelength=filelength)
       CALL linear_interp(T_INTERP=T_INTERP,T=T,Y=ZG, &
             DATAFILE='zg_interp.dat',interpLength=interpLength, &
-            filelength=filelength,Y_INTERP=ZG_INTERP)
-
-!----------------------------------- COUPLE ------------------------------------
-      PRINT *, 'DG_INTERP: ', DG_INTERP(1)
-      CALL PHYS(T0=T_INTERP(1),T=T_INTERP,DG_INTERP=DG_INTERP,RELU_INTERP=RELU_INTERP, &
-            RHOE_INTERP=RHOE_INTERP,RHOG_INTERP=RHOG_INTERP,RHOI_INTERP=RHOI_INTERP, & 
-            RHON_INTERP=RHON_INTERP,TEE_INTERP=TEE_INTERP,TEI_INTERP=TEI_INTERP, &
-            TEN_INTERP=TEN_INTERP,ZG_INTERP=ZG_INTERP,DG_RETURN=DG_RETURN, &
-            RELU_RETURN=RELU_RETURN,RHOE_RETURN=RHOE_RETURN,RHOG_RETURN=RHOG_RETURN, &
-            RHOI_RETURN=RHOI_RETURN,RHON_RETURN=RHON_RETURN,TEE_RETURN=TEE_RETURN, &
-            TEI_RETURN=TEI_RETURN,TEN_RETURN=TEN_RETURN,ZG_RETURN=ZG_RETURN, &
-            interpLength=interpLength)
-      PRINT *, 'DG_RETURN: ', DG_RETURN
-      PRINT *, 'RELU_RETURN: ', RELU_RETURN
-
+            filelength=filelength)
  END PROGRAM
