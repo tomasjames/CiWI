@@ -1,2 +1,3 @@
 .DS_STORE
 *.xq
+*_interp.dat
