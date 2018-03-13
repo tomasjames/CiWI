@@ -6,6 +6,7 @@
 !
 !------------------------------------------------------------------------------
       USE interp
+      USE params
 
       IMPLICIT NONE ! Ensures that implicit types are ignored
       CHARACTER*11 :: DGFILE,RELUFILE,RHOEFILE,RHOGFILE,RHOIFILE, &
@@ -20,7 +21,11 @@
             Y(filelength),ZG(filelength)
 
       DOUBLE PRECISION, PARAMETER :: L_BOUND=0, U_BOUND=2.33e+10
-      DOUBLE PRECISION, DIMENSION(filelength) :: T_INTERP,DG_INTERP
+      DOUBLE PRECISION, DIMENSION(filelength) :: T_INTERP,DG_INTERP,RELU_INTERP, &
+            RHOE_INTERP,RHOG_INTERP,RHOI_INTERP,RHON_INTERP,TEE_INTERP,TEI_INTERP, &
+            TEN_INTERP,ZG_INTERP
+
+      DOUBLE PRECISION :: DG_POINT
 
 !---------------------------- INPUT PARAMETERS --------------------------------
       ! I/O files
@@ -93,34 +98,40 @@
             END IF
       END DO
 
-      CALL linear_interp(T_INTERP=T_INTERP,T=T,Y=DG, &
+      CALL linear_interp(T_INTERP=T_INTERP,T=T,Y=DG,Y_INTERP=DG_INTERP, &
             DATAFILE='dg_interp.dat',interpLength=interpLength, &
             filelength=filelength)
-      CALL linear_interp(T_INTERP=T_INTERP,T=T,Y=RELU, &
+      CALL linear_interp(T_INTERP=T_INTERP,T=T,Y=RELU,Y_INTERP=RELU_INTERP, &
             DATAFILE='relu_interp.dat',interpLength=interpLength, &
             filelength=filelength)
-      CALL linear_interp(T_INTERP=T_INTERP,T=T,Y=RHOE, &
+      CALL linear_interp(T_INTERP=T_INTERP,T=T,Y=RHOE,Y_INTERP=RHOE_INTERP, &
             DATAFILE='rhoe_interp.dat',interpLength=interpLength, &
             filelength=filelength)
-      CALL linear_interp(T_INTERP=T_INTERP,T=T,Y=RHOG, &
+      CALL linear_interp(T_INTERP=T_INTERP,T=T,Y=RHOG,Y_INTERP=RHOG_INTERP, &
             DATAFILE='rhog_interp.dat',interpLength=interpLength, &
             filelength=filelength)
-      CALL linear_interp(T_INTERP=T_INTERP,T=T,Y=RHOI, &
+      CALL linear_interp(T_INTERP=T_INTERP,T=T,Y=RHOI,Y_INTERP=RHOI_INTERP, &
             DATAFILE='rhoi_interp.dat',interpLength=interpLength, &
             filelength=filelength)
-      CALL linear_interp(T_INTERP=T_INTERP,T=T,Y=RHON, &
+      CALL linear_interp(T_INTERP=T_INTERP,T=T,Y=RHON,Y_INTERP=RHON_INTERP, &
             DATAFILE='rhon_interp.dat',interpLength=interpLength, &
             filelength=filelength)
-      CALL linear_interp(T_INTERP=T_INTERP,T=T,Y=TEE, &
+      CALL linear_interp(T_INTERP=T_INTERP,T=T,Y=TEE,Y_INTERP=TEE_INTERP, &
             DATAFILE='tee_interp.dat',interpLength=interpLength, &
             filelength=filelength)
-      CALL linear_interp(T_INTERP=T_INTERP,T=T,Y=TEI, &
+      CALL linear_interp(T_INTERP=T_INTERP,T=T,Y=TEI,Y_INTERP=TEI_INTERP, &
             DATAFILE='tei_interp.dat',interpLength=interpLength, &
             filelength=filelength)
-      CALL linear_interp(T_INTERP=T_INTERP,T=T,Y=TEN, &
+      CALL linear_interp(T_INTERP=T_INTERP,T=T,Y=TEN,Y_INTERP=TEN_INTERP, &
             DATAFILE='ten_interp.dat',interpLength=interpLength, &
             filelength=filelength)
-      CALL linear_interp(T_INTERP=T_INTERP,T=T,Y=ZG, &
+      CALL linear_interp(T_INTERP=T_INTERP,T=T,Y=ZG,Y_INTERP=ZG_INTERP, &
             DATAFILE='zg_interp.dat',interpLength=interpLength, &
             filelength=filelength)
+
+!----------------------------------- CALL ------------------------------------
+
+      CALL phys(XDATA=T_INTERP,YDATA=DG_INTERP,XDATAPOINT=T_INTERP(3), &
+            filelength=2331,YDATAPOINT=DG_POINT)
+
  END PROGRAM

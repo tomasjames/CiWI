@@ -2,11 +2,11 @@ MODULE interp
     IMPLICIT NONE
 
     CONTAINS
-        SUBROUTINE linear_interp (T_INTERP,T,Y,DATAFILE,interpLength,filelength)
+        SUBROUTINE linear_interp (T_INTERP,T,Y,Y_INTERP,DATAFILE,interpLength,filelength)
 
             INTEGER :: j,k
             DOUBLE PRECISION :: T1,T2
-            DOUBLE PRECISION :: Y_INTERP(interpLength)
+            DOUBLE PRECISION, INTENT(OUT) :: Y_INTERP(interpLength)
 
             DOUBLE PRECISION, INTENT(IN) :: T_INTERP(interpLength)
             DOUBLE PRECISION, INTENT(IN) :: T(filelength),Y(filelength)
