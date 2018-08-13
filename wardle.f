@@ -97,9 +97,9 @@ C----I/O files
       UNITL='report.d'
       UNIT7='coll_specs.d'
       UNIT8='coll_rates.d'
-      DGFILE='data/dg_interp.dat'
-      TENFILE='data/ten_interp.dat'
-      RHONFILE='data/rhon_interp.dat'
+      DGFILE='interp/dg_interp.dat'
+      TENFILE='interp/ten_interp.dat'
+      RHONFILE='interp/rhon_interp.dat'
 
 C------------------------------------------------------------------------------
 C
@@ -144,7 +144,9 @@ C      FDUST=0.01
 C--Metallicity fraction
       FRM=100.0
 C
-      XFRAC=1.0D-20
+C      XFRAC=1.0D-20
+C      HFRAC=1.0/DEN0
+      XFRAC=6.2285D-08
       HFRAC=1.0/DEN0
 C
 C      TMIN=100.0*YEAR
@@ -591,7 +593,8 @@ C
       COMMON/BLK2/B,TAGE
 C--List of selected species numbers (for reduced output)
 C  [HCO+,H2CO,CS,N2H+,NH3,C,OH,ELECTR] +2 for conserved species
-      DATA J1,J2,J3,J4,J5,J6,J7,J8/48,49,74,35,30,10,40,2/
+C      DATA J1,J2,J3,J4,J5,J6,J7,J8/48,49,74,35,30,10,40,2/
+      DATA J1,J2,J3,J4,J5,J6,J7,J8/56,58,13,42,30,40,2,128/
 C
 C---Put the B and TAGE arrays into appropriate forms
       DO 1 I=1,IRUN

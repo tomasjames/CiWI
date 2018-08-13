@@ -3,8 +3,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 wardle_output = np.loadtxt('output.d', skiprows=46)
-mhd = np.loadtxt('ten.xq')
-mhd_rho = np.loadtxt('rhon.xq')
+mhd = np.loadtxt('data/ten.xq', skiprows=3)
+mhd_rho = np.loadtxt('data/rhon.xq', skiprows=3)
 mhd_time = mhd[:,0]
 mhd_temp = mhd[:,1]
 mhd_n = mhd_rho[:,1]/(2*1.6737236e-24)
@@ -14,7 +14,7 @@ mhd_n = mhd_rho[:,1]/(2*1.6737236e-24)
 # title = lines[19]
 
 time = wardle_output[:, 0]
-dg_file = np.loadtxt('dg.xq')
+dg_file = np.loadtxt('data/dg.xq', skiprows=3)
 dg = dg_file[:,1]
 # species = wardle_output[0:, 1:]
 

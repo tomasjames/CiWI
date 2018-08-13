@@ -1,8 +1,11 @@
 interp/
 plots/
 tests/
+data/
 
 .DS_STORE
 *.xq
 *_interp.dat
 *.d
+*.png
+*.jpeg
