@@ -22,7 +22,7 @@ C------------------------------------------------------------------------------
 C
       IMPLICIT DOUBLE PRECISION(A-H,O-Z)
 C
-      PARAMETER(NSP=100,NEL=6,NCONS=2,NRM=1500,NOP=2228)
+      PARAMETER(NSP=230,NEL=6,NCONS=2,NRM=2500,NOP=2329)
 C
       CHARACTER*8  RE1(NRM),RE2(NRM),P1(NRM),P2(NRM),P3(NRM),P4(NRM),
      *             SPECI(NSP),SPX(NEL)
@@ -34,8 +34,8 @@ C
       INTEGER INDR(NRM),ISPX(NEL)
 C
 C** For LSODE
-      REAL*8  RWORK(11000)
-      INTEGER IWORK(120)
+      REAL*8  RWORK(48200)
+      INTEGER IWORK(400)
       CHARACTER*5 JAC
       EXTERNAL DIFFUN
 C**
@@ -52,7 +52,7 @@ C**
       COMMON/ORDER1/RE1,RE2,P1,P2,P3,P4
       COMMON/ORDER2/INDR,IOTYP
 C
-      DATA  NG,NS/79,17/
+      DATA  NG,NS/50,165/
 C-- FRAC, DPLT are the elemental abundances and depletions factors for -----
 C   species (SPX) whose index number in the species set is given by ISPX
 C   It is assumed that conserved species are (1) H2 and (2) electrons.
@@ -65,8 +65,8 @@ C--Asplund, Grevesse & Sauval values (2005)
       DATA  DPLT/1.0,0.68,0.53,0.68,0.85,1.82/
 C      DATA  DPLT/1.0,0.5,1.0,1.0,0.01,0.086/
       DATA  SPX/'HE','C','N','O','S','NA'/
-      DATA  ISPX/6,8,22,34,65,43/
-      DATA  IHI,ICO/1,11/
+      DATA  ISPX/5,8,14,24,90,35/
+      DATA  IHI,ICO/1,57/
 C
       DATA PC,YEAR/3.0856D18,3.1557D7/
       DATA BOLTK,AMU,PI/1.381D-23,1.67D-27,3.1415927/
@@ -76,10 +76,10 @@ C** For LSODE
       JAC='DUMMY'
       ITASK=1
       IOPT=0
-      LRW=11000
-      LIW=120
-      RTOL=1.0E-6
-      ATOL=1.0E-16
+      LRW=48200
+      LIW=400
+      RTOL=1.0E-4
+      ATOL=1.0E-12
 C**
 C
 C--NTD is the total number of time-dependent chemical species
@@ -112,8 +112,6 @@ C     Read the data
             READ(20,*) T_INTERP(i),DG(i)
             READ(21,*) DUMMY(i),TEN(i)
             READ(22,*) DUMMY(i),RHON(i)
-
-            WRITE(*,*) "DG(i)=",DG(i)
 
 C           Convert mass density to number density
             NON(i)=RHON(i)/(2*1.67D-24)
@@ -251,7 +249,7 @@ C
 C  Read the species file
 C
       SPECI(1)='H2'
-      SPECI(2)='ELECTR'
+      SPECI(2)='E-'
       OPEN(7,FILE=UNIT7,STATUS='OLD')
       READ(7,1)(INDXS,SPECI(J+2),J=1,NTD)
  1    FORMAT(5(2X,I3,2X,A8,1X))
@@ -274,7 +272,8 @@ C
  10   J=J+1
       READ(8,3) INDR(J),RE1(J),RE2(J),P1(J),P2(J),P3(J),P4(J),
      *          GAMMA,ALPHA,BETA
- 3    FORMAT(I4,4(1X,A8),2(1X,A4),1X,1PE8.2,1X,0PF5.2,1X,F8.1)
+C 3    FORMAT(I4,4(1X,A8),2(1X,A4),1X,1PE8.2,1X,0PF5.2,1X,F8.1)
+ 3    FORMAT(I4,4(1X,A8),2(1X,A4),1X,1PE10.2,1X,0PF6.2,1X,F8.1)
       INDXJ=INDR(J)
 C
 C  store reaction data
@@ -282,14 +281,14 @@ C
       IF(INDXJ.EQ.9999) GO TO 11
       IF(RE2(J).EQ.'CRP') THEN
           K(INDXJ)=GAMMA*CRAT
-      ELSE IF((RE2(J).EQ.'PHOTON').AND.(P2(J).NE.'G')) THEN
+      ELSE IF((RE2(J).EQ.'PHOTON').AND.(P2(J).NE.'#')) THEN
           IPR=IPR+1
           IF(BETA.EQ.0.0) BETA=DEFF
           PRAT(IPR,1)=INDXJ
           PRAT(IPR,2)=GAMMA
           PRAT(IPR,3)=ALPHA
           PRAT(IPR,4)=BETA*ALBFAC*CRAT 
-      ELSE IF(RE2(J).EQ.'G') THEN
+      ELSE IF(RE2(J).EQ.'FREEZE') THEN
           IDR=IDR+1
           DRAT(IDR,1)=INDXJ
           DRAT(IDR,2)=GAMMA
@@ -297,7 +296,7 @@ C
           DRAT(IDR,4)=BETA
 C--Identify reaction number for: H + grain -> H2
           IF(RE1(J).EQ.'H') IH2=INDXJ
-      ELSE IF((RE2(J).EQ.'PHOTON').AND.(P2(J).EQ.'G')) THEN
+      ELSE IF((RE2(J).EQ.'PHOTON').AND.(P2(J).EQ.'#')) THEN
           IER=IER+1
           ERAT(IER,1)=INDXJ
           IF(GAMMA.EQ.0.0) GAMMA=CRDEF
@@ -357,29 +356,30 @@ C--Set the density
 C
       ISTATE=1
       IFC=0
-      T0=T_INTERP(1)
+C      T0=T_INTERP(1)
+      T0=0
 C      DG0=DG(1)
       DG0=FDUST
       TEN0=TEN(1)
       NON0=NON(1)
 C      TOUT=TMIN/TINC
 C---------------------------------INTEGRATION LOOP-------------------------------
-      IRUN=2
+      IRUN=0
 C 23      TOUT=TOUT*TINC
- 23      TOUT=T_INTERP(IRUN)
-         WRITE(*,*) "TOUT=",TOUT
+ 23      IRUN=IRUN+1
+         TOUT=T_INTERP(IRUN)
          DGOUT=DG(IRUN)         
-         WRITE(*,*) "DGOUT=",DGOUT
          TENOUT=TEN(IRUN)
-         WRITE(*,*) "TENOUT=",TENOUT
          NONOUT=NON(IRUN)
-         WRITE(*,*) "NONOUT=",NONOUT
 C
+         WRITE(*,*) "IRUN=",IRUN
+         WRITE(*,*) "T0=",T0
+         WRITE(*,*) "TMAX=",TMAX
+         WRITE(*,*) "TOUT=",TOUT
          CALL DLSODE(DIFFUN,N,Y0,T0,TOUT,ITOL,RTOL,ATOL,ITASK,
      *               ISTATE,IOPT,RWORK,LRW,IWORK,LIW,JAC,MF)
          IF(ISTATE.NE.2) WRITE(LRUN,201) ISTATE
 C--Store the results
-         IRUN=IRUN+1
          TAGE(IRUN)=TOUT/YEAR
          B(1,IRUN)=X(1)
          B(2,IRUN)=X(2)
@@ -411,7 +411,7 @@ C***************** FOR USE BY INTEGRATOR WHEN CALLING DIFFUN ******************
 C
       SUBROUTINE ADJUST(N,T,Y,YDOT)
       IMPLICIT DOUBLE PRECISION(A-H,O-Z)
-      PARAMETER(NCONS=2,NRM=1500)
+      PARAMETER(NCONS=2,NRM=2500)
 C
       REAL*8 K(NRM),Y(N),YDOT(N),X(NCONS),TOTAL(NCONS),
      *       TRAT(NRM,4),PRAT(NRM,4),DRAT(NRM,4),ERAT(NRM,4)
@@ -585,7 +585,7 @@ C
 C-- Subroutine to write out the results ---------------------------------------
       SUBROUTINE RESULT(IRUN,NMAX,IFULL,LOUT)
       IMPLICIT DOUBLE PRECISION(A-H,O-Z)
-      PARAMETER(NSP=100,NOP=2228)
+      PARAMETER(NSP=230,NOP=2329)
 C
       DIMENSION B(NSP,NOP),BL(NSP,NOP),TAGE(NOP)
       CHARACTER*8 SPECI(NSP)
