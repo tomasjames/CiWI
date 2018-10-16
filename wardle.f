@@ -97,9 +97,9 @@ C----I/O files
       UNITL='report.d'
       UNIT7='coll_specs.d'
       UNIT8='coll_rates.d'
-      DGFILE='data/dg_interp.dat'
-      TENFILE='data/ten_interp.dat'
-      RHONFILE='data/rhon_interp.dat'
+      DGFILE='interp/dg_interp.dat'
+      TENFILE='interp/ten_interp.dat'
+      RHONFILE='interp/rhon_interp.dat'
 
 C------------------------------------------------------------------------------
 C
@@ -112,8 +112,6 @@ C     Read the data
             READ(20,*) T_INTERP(i),DG(i)
             READ(21,*) DUMMY(i),TEN(i)
             READ(22,*) DUMMY(i),RHON(i)
-
-            WRITE(*,*) "DG(i)=",DG(i)
 
 C           Convert mass density to number density
             NON(i)=RHON(i)/(2*1.67D-24)
@@ -356,8 +354,8 @@ C
       ISTATE=1
       IFC=0
       T0=T_INTERP(1)
-C      DG0=DG(1)
-      DG0=FDUST
+      DG0=DG(1)
+C       DG0=FDUST
       TEN0=TEN(1)
       NON0=NON(1)
 C      TOUT=TMIN/TINC
@@ -365,13 +363,13 @@ C---------------------------------INTEGRATION LOOP------------------------------
       IRUN=2
 C 23      TOUT=TOUT*TINC
  23      TOUT=T_INTERP(IRUN)
-         WRITE(*,*) "TOUT=",TOUT
+C          WRITE(*,*) "TOUT=",TOUT
          DGOUT=DG(IRUN)         
-         WRITE(*,*) "DGOUT=",DGOUT
+C          WRITE(*,*) "DGOUT=",DGOUT 
          TENOUT=TEN(IRUN)
-         WRITE(*,*) "TENOUT=",TENOUT
+C          WRITE(*,*) "TENOUT=",TENOUT
          NONOUT=NON(IRUN)
-         WRITE(*,*) "NONOUT=",NONOUT
+C          WRITE(*,*) "NONOUT=",NONOUT
 C
          CALL DLSODE(DIFFUN,N,Y0,T0,TOUT,ITOL,RTOL,ATOL,ITASK,
      *               ISTATE,IOPT,RWORK,LRW,IWORK,LIW,JAC,MF)

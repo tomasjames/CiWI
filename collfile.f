@@ -29,7 +29,7 @@ C     *     'NH3','H2NC+','NO','HCO+','H3O+','OH','O2','CO','C2H+','H+',
 C     *     'HE+','C+','S+','C2S','HC2S+','ELECTR'/
       DATA LOR/2/
 C
-      WRITE(LOR,4) RAD,TIME
+      WRITE(2,4) RAD,TIME
  4    FORMAT(1X,'Analysis at ',1PE8.2,' pc. and ',1PE8.2,' years',/)
 C
       DO 112 K1=1,NRM
