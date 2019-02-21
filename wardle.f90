@@ -1,4 +1,4 @@
- PROGRAM  WARDLE
+PROGRAM  WARDLE
 !
 !------------------------------------------------------------------------------
 !
@@ -23,7 +23,7 @@
       IMPLICIT DOUBLE PRECISION(A-H,O-Z)
 !
 !
-      PARAMETER(NSP=214,NEL=6,NRM=2320,NOP=2228,NG=165,NS=49)
+      PARAMETER(NSP=213,NEL=6,NRM=2394,NOP=2328,NG=163,NS=50)
 !
       CHARACTER*8  RE1(NRM),RE2(NRM),P1(NRM),P2(NRM),P3(NRM),P4(NRM), &
       &             SPECI(NSP),SPX(NEL),GSPEC(NG),SSPEC(NS)
@@ -35,8 +35,8 @@
       INTEGER INDR(NRM),ISPX(NEL),N,G,S
 !
 !** For LSODE
-      REAL*8  RWORK(6000000)
-      INTEGER IWORK(25000)
+      REAL*8  RWORK(48000)
+      INTEGER IWORK(240)
       CHARACTER*5 JAC
       EXTERNAL DIFFUN
 !**
@@ -70,7 +70,7 @@
 !     DATA  DPLT/1.0,0.5,1.0,1.0,0.01,0.086/
       DATA  SPX/'HE','C','N','O','S','NA'/
       DATA  ISPX/6,9,15,26,104,39/
-      DATA  IHI,ICO/1,66/
+      DATA  IHI,ICO/1,64/
 !
       DATA PC,YEAR/3.0856D18,3.1557D7/
       DATA BOLTK,AMU,PI/1.381D-23,1.67D-27,3.1415927/
@@ -145,6 +145,7 @@
 !     TMAX=1.0E7*YEAR
 !     TINC=10.0**(0.1)
       TMAX=T_INTERP(NOP)
+      WRITE(*,*) "TMAX=",TMAX
 !--Photochemistry parameters
       CRAT=1.3E-16
       DEFF=200.0
@@ -249,24 +250,6 @@
       CLOSE(7)
  1    FORMAT((3X,I3,3X,A8,1X))
 
-      N = 1
-      G = 0
-      S = 0
-      DO N = 1, NTOT
-        IF (SPECI(N)(1:1) .NE. "#") THEN
-            ! Set the gas phase abundances to Metallicity fraction
-            Y0(N) = XFRAC 
-        ELSE IF (SPECI(N)(1:1) .EQ. "#") THEN
-            ! S = S + 1
-            ! SSPEC(S) = SPECI(N)
-            ! SINDX(G) = N
-            ! Set solid state abundances to 0.0
-            Y0(N) = 0.0
-        END IF
-      END DO
-      
-      ! WRITE(*,*) "SSPEC=",SSPEC
-      ! WRITE(*,*) "GSPEC=",GSPEC
 !
 !------------------------------------------------------------------------------
 !
@@ -334,30 +317,37 @@
       IF(LRUN.NE.6) OPEN(LRUN,FILE=UNITL,STATUS='NEW')
       OPEN(2,FILE=UNIT2,STATUS='UNKNOWN') 
 !
+!-- Set the abundances
+      N = 1
+      DO N = 1, NTOT
+        IF (SPECI(N)(1:1) .NE. "#") THEN
+            ! Set the gas phase abundances to Metallicity fraction
+            Y0(N) = XFRAC 
+        ELSE IF (SPECI(N)(1:1) .EQ. "#") THEN !-- Set the solid state abundances to 0 (i.e. nothing on the grains)
+            Y0(N) = 0.0
+        END IF
+      END DO
 !** Total abundances for H2 and electrons
       Y0(3)=0.5
-      Y0(214)=0.0
-!--Set gas-phase abundances to XFRAC at start of calculations
-      ! DO 25 I=1,NG
- ! 25   Y0(GINDX(I))=XFRAC
-!--except H (set to HFRAC)
+      Y0(213)=0.0
+!--H (set to HFRAC)
       Y0(IHI)=HFRAC
 !--and ice mantle components, returned to the gas-phase
       XWATER=1.0D-4*FRM
 !--H2O
-      Y0(40)=1.0*XWATER
+      Y0(35)=1.0*XWATER
 !--CO2
-      Y0(49)=0.2*XWATER
+      Y0(148)=0.2*XWATER
 !--CO
-      Y0(11)=0.15*XWATER
+      Y0(64)=0.15*XWATER
 !--CH4
-      Y0(19)=0.04*XWATER
+      Y0(22)=0.04*XWATER
 !--NH3
-      Y0(28)=0.01*XWATER
+      Y0(30)=0.01*XWATER
 !--H2CO
-      Y0(47)=0.03*XWATER
+      Y0(83)=0.03*XWATER
 !--CH3OH
-      Y0(100)=0.03*XWATER
+      Y0(98)=0.03*XWATER
 !--He
       Y0(6)=0.1
 !--------------------------------------------------------
@@ -371,7 +361,8 @@
 !
       ISTATE=1
       IFC=0
-      T0=T_INTERP(1)
+      ! T0=T_INTERP(1)
+      T0=0.0
       DG0=DG(1)
 !      DG0=FDUST
       TEN0=TEN(1)
@@ -383,23 +374,27 @@
       JAC='DUMMY'
       ITASK=1
       IOPT=0
-      LRW=6000000
-      LIW=2500
-      RTOL=1.0E-6
-      ATOL=1.0E-16
+      LRW=48000
+      LIW=240
+      RTOL=1.0E-4
+      ATOL=1.0E-8
 
 !---------------------------------INTEGRATION LOOP-------------------------------
-      IRUN=2
+      IRUN=0
 !23      TOUT=TOUT*TINC
- 23      TOUT=T_INTERP(IRUN)
-        WRITE(*,*) "TOUT=",TOUT
+ 23      IRUN=IRUN+1
+         TOUT=T_INTERP(IRUN)
+         ! WRITE(*,*) "TOUT/TMAX=",TOUT/TMAX
+        ! WRITE(*,*) "TOUT=",TOUT
          DGOUT=DG(IRUN)         
-        WRITE(*,*) "DGOUT=",DGOUT 
+        ! WRITE(*,*) "DGOUT=",DGOUT 
          TENOUT=TEN(IRUN)
-        WRITE(*,*) "TENOUT=",TENOUT
+        ! WRITE(*,*) "TENOUT=",TENOUT
          NONOUT=NON(IRUN)
-        WRITE(*,*) "NONOUT=",NONOUT
-        WRITE(*,*) "Y0(1)=",Y0(1)
+        ! WRITE(*,*) "NONOUT=",NONOUT 
+        IF (IRUN .LE. 10) THEN
+            WRITE(*,*) "Y0(30)=",Y0(30)
+        END IF
 !
          CALL DLSODE(DIFFUN,N,Y0,T0,TOUT,ITOL,RTOL,ATOL,ITASK, &
            &        ISTATE,IOPT,RWORK,LRW,IWORK,LIW,JAC,MF)
@@ -408,7 +403,6 @@
          ! WRITE(*,*) "VODE_F90 COMPLETE"
          IF(ISTATE.NE.2) WRITE(LRUN,201) ISTATE
 !--Store the results
-         IRUN=IRUN+1
          TAGE(IRUN)=TOUT/YEAR
          ! B(1,IRUN)=X(1)
          ! B(2,IRUN)=X(2)
@@ -440,7 +434,7 @@
 !
       SUBROUTINE ADJUST(N,T,Y,YDOT)
       IMPLICIT DOUBLE PRECISION(A-H,O-Z)
-      PARAMETER(NCONS=2,NRM=2320)
+      PARAMETER(NCONS=2,NRM=2394)
 !
       REAL*8 K(NRM),Y(N),YDOT(N), &
      &       TRAT(NRM,4),PRAT(NRM,4),DRAT(NRM,4),ERAT(NRM,4)
@@ -475,8 +469,8 @@
              K(INDXJ)=G0*PRAT(I,2)*DEXP(-AV*PRAT(I,3))+PRAT(I,4)
  5       CONTINUE
 !--H2 and CO self-shielding factors
-         K(1059)=H2SHL*K(1059)
-         K(1066)=COSHL*K(1066)
+         K(361)=H2SHL*K(361) ! H2 is CRP
+         K(2001)=COSHL*K(2001)
 !========= TEMPERATURE-DEPENDENT RATES & GAS-GRAIN INTERACTIONS ==============
 !
 !        TGAS=TEMP0
@@ -500,9 +494,9 @@
             GRATH=0.0
          END IF
          PREFAC=FFRZ*PREFAC
-         GRAT0=PREFA!*STICK0
-         GRATP=PREFA!*POSFA!*STICKP
-         GRATN=PREFA!*NEGFA!*STICKN
+         GRAT0=PREFAC*STICK0
+         GRATP=PREFAC*POSFAC*STICKP
+         GRATN=PREFAC*NEGFAC*STICKN
 !
          DO 2 I=1,IDR
             IND=DRAT(I,1)
@@ -524,7 +518,7 @@
       END IF
       IFC=0
 !
-! Fraction of binding sites occupied by GCO 
+! Fraction of binding sites occupied by #CO 
       COCOV=Y(81)/FSITES
       COCOV=DMIN1(COCOV,1.D0)
 ! Fraction of binding sites occupied by GCO2 
@@ -616,14 +610,14 @@
         DOUBLE PRECISION PROD,LOSS
         REAL*8 K
 !
-        PARAMETER(NRM=2320,NSP=214)
+        PARAMETER(NRM=2394,NSP=213)
 !
         DIMENSION K(NRM),Y(N),YDOT(N)
         COMMON /BLK3/K,D
         COMMON /BLK9/FCO2,COCOV,FOX,PHOH,H2SHL,COSHL,FFRZ,FDES
 !
         CALL ADJUST(N,T,Y,YDOT)
-        WRITE(*,*) "CALLING odes.f90"
+        ! WRITE(*,*) "CALLING odes.f90"
         INCLUDE 'odes.f90'
 
         RETURN
@@ -632,15 +626,15 @@
 !-- Subroutine to write out the results ---------------------------------------
       SUBROUTINE RESULT(IRUN,NMAX,IFULL,LOUT)
       IMPLICIT DOUBLE PRECISION(A-H,O-Z)
-      PARAMETER(NSP=214,NOP=2228)
+      PARAMETER(NSP=213,NOP=2328)
 !
       DIMENSION B(NSP,NOP),BL(NSP,NOP),TAGE(NOP)
       CHARACTER*8 SPECI(NSP)
       COMMON/BLK1/SPECI
       COMMON/BLK2/B,TAGE
 !--List of selected species numbers (for reduced output)
-! [HCO+,H2CO,CS,N2H+,NH3,C,OH,ELECTR] +2 for conserved species
-      DATA J1,J2,J3,J4,J5,J6,J7,J8/48,49,74,35,30,10,40,2/
+! [HNCO,HCO,HCN,HNC,NH3,H,CH3OH,H2S] +2 for conserved species
+      DATA J1,J2,J3,J4,J5,J6,J7,J8/144,74,56,58,30,1,98,114/
 !
 !---Put the B and TAGE arrays into appropriate forms
       DO 1 I=1,IRUN

@@ -1,7 +1,7 @@
-#FC = gfortran
-FC=ifort
-FFLAGS = -O -Wall -fcheck=all -g -fbacktrace -g -ffpe-trap=zero,invalid,overflow,underflow
-# FFLAGS = -g -traceback -check all -fp-stack-check -debug all -warn -CB
+FC = gfortran
+#FC=ifort
+FFLAGS = -O -Wall -fcheck=all -g -fbacktrace
+#FFLAGS = -g -traceback -check all -fp-stack-check -debug all -warn -CB
 
 wardle: wardle.f90 dlsode.o
 	${FC} ${FFLAGS} -o wardle wardle.f90 dlsode.o
@@ -27,8 +27,8 @@ params.o: params.f90
 clean-ciwi: 
 	rm *.o *.mod ciwi
 
-network: network.f90
-	gfortran -o network network.f90 -ffpe-trap=invalid -fbacktrace
+network: networkConversion.f90
+	gfortran -o network networkConversion.f90 -ffpe-trap=invalid -fbacktrace
 
 clean-network:
 	rm network

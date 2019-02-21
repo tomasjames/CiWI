@@ -42,8 +42,9 @@ speciesList=remove_duplicate_species(speciesList)
 # IF the reaction involves species in our Species List
 nReactions1, reactions1 = read_reaction_file(reactionFile, speciesList,'UMIST')
 nReactions2, reactions2 = read_reaction_file(reactionFile_grain,speciesList,'UCL')
+
 reactionList=reactions1+reactions2
-# reactionList=add_desorb_reactions(speciesList,reactionList)
+reactionList=add_desorb_reactions(speciesList,reactionList)
 
 #Keep only the species that are involved in the final reaction list
 print '\nRemoving unused species...'

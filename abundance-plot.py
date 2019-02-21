@@ -2,7 +2,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 
-wardle_output = np.loadtxt('output.d', skiprows=46)
+wardle_output = np.loadtxt('output.d', skiprows=47)
 mhd = np.loadtxt('data/ten.xq',skiprows=3)
 mhd_rho = np.loadtxt('data/rhon.xq',skiprows=3)
 mhd_time = mhd[:,0]
