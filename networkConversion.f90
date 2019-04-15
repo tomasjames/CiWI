@@ -49,7 +49,7 @@
     ! Read in the species
     DO species=1,speciesFileLength
         READ(3,*) SPEC(species), DUMMY, DUMMY
-        IF (SPEC(species)(1:1) .NE. "G") THEN
+        IF (SPEC(species)(1:1) .NE. "#") THEN
             NG=NG+1
         ELSE IF (SPEC(species)(1:1) .EQ. "#") THEN
             NS=NS+1
@@ -65,6 +65,11 @@
 
     DO reaction=1,reactionFileLength
         WRITE(2,FMT="(I4,4(1X,A8),2(1X,A4),1X,1PE10.2,1X,0PF6.2,1X,F8.1)") reaction, &
+                & REACT(1,reaction), REACT(2,reaction), &
+                & PROD(1,reaction), PROD(2,reaction), &
+                & PROD(3,reaction), PROD(4,reaction), ALPHA(reaction), & 
+                & BETA(reaction), GAMMA(reaction)
+        WRITE(*,FMT="(I4,4(1X,A8),2(1X,A4),1X,1PE10.2,1X,0PF6.2,1X,F8.1)") reaction, &
                 & REACT(1,reaction), REACT(2,reaction), &
                 & PROD(1,reaction), PROD(2,reaction), &
                 & PROD(3,reaction), PROD(4,reaction), ALPHA(reaction), & 

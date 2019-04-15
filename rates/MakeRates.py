@@ -78,7 +78,7 @@ print '\tFinal Species File:',filename
 # Create the reaction file
 print 'Writing final reaction file...'
 filename = 'outputFiles/reactions.csv'
-write_reactions(filename, reactionList)
+write_reactions(filename, speciesList, reactionList)
 print '\tFinal Reaction File:',filename
 
 #TODO this doesn't work now I use species objects

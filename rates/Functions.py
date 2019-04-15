@@ -1,4 +1,4 @@
-#! /usr/bin/python
+#! /ATE/bin/python
 import math
 import os
 import string
@@ -283,15 +283,29 @@ def write_species(fileName, speciesList):
 		writer.writerow([species.name,species.mass,species.n_atoms])
 
 # Write the reaction file in the desired format
-def write_reactions(fileName, reactionList):
+def write_reactions(fileName, speciesList, reactionList):
 	f = open(fileName, 'wb')
 	writer = csv.writer(f,delimiter=',',quotechar='|',quoting=csv.QUOTE_MINIMAL, lineterminator='\n')
 	nReactions = len(reactionList)
 	for reaction in reactionList:
 		#if statement changes beta for ion freeze out to 1. This is how ucl_chem recognises ions when calculating freeze out rate
-		if ('FREEZE' in reaction.reactants and reaction.reactants[0][-1]=='+'):
-			reaction.beta=1
-		writer.writerow(reaction.reactants+reaction.products+[reaction.alpha,reaction.beta,reaction.gamma,reaction.templow,reaction.temphigh])
+		if ('FREEZE' in reaction.reactants):
+			if (reaction.reactants[0][-1]=='+'):
+				reaction.beta=1
+			for reactant in reaction.reactants:
+				if reactant == "NAN" or reactant == "FREEZE":
+					continue
+				print("reactant={0}").format(reactant)
+				for species in speciesList:
+					print("species.name={0}").format(species.name)
+					if reactant == species.name:
+						# print("species.name={0}").format(species.name)
+						mass = int(species.mass)
+						print("reaction.gamma={0}").format(mass)
+						writer.writerow(reaction.reactants+reaction.products+[reaction.alpha, reaction.beta, mass, reaction.templow, reaction.temphigh])
+		else:
+			writer.writerow(reaction.reactants+reaction.products+[reaction.alpha,reaction.beta,reaction.gamma,reaction.templow,reaction.temphigh])
+		# print(reaction.reactants+reaction.products+[reaction.alpha,reaction.beta,reaction.gamma,reaction.templow,reaction.temphigh])
 
 def write_odes_f90(fileName, speciesList, reactionList):
 	output = open(fileName, mode='w')
@@ -316,11 +330,11 @@ def build_ode_string(speciesList, reactionList):
 				bodyCount=0 #two or more bodies in a reaction mean we multiply rate by density so need to keep track
 				#easy for h2 formation
 				if is_H2_formation(reaction.reactants, reaction.products):
-					lossString += '-2*K('+str(i+1)+')*D'
+					lossString += '-2*RATE('+str(i+1)+')*D'
 					continue
 				#multiply string by number of time species appears in reaction. multiple() defined below
 				#so far reaction string is rate(reaction_index) indexs are all +1 for fortran array indexing
-				lossString += '-'+multiple(reaction.reactants.count(species.name))+'K('+str(i+1)+')'
+				lossString += '-'+multiple(reaction.reactants.count(species.name))+'RATE('+str(i+1)+')'
 				
 				#now add *Y(species_index) to string for every reactant
 				for reactant in set(reaction.reactants):
@@ -359,13 +373,13 @@ def build_ode_string(speciesList, reactionList):
 				if is_H2_formation(reaction.reactants,reaction.products):
 					#honestly H should be index 1 but lets check
 					H_index=speciesList.index(next((x for x in speciesList if x.name=='H')))
-					formString += '+K('+str(i+1)+')*Y('+str(H_index+1)+')*D'
+					formString += '+RATE('+str(i+1)+')*Y('+str(H_index+1)+')*D'
 					continue
 
 				#multiply string by number of time species appears in reaction. multiple() defined below
 				#so far reaction string is rate(reaction_index) indexs are all +1 for fortran array indexing
 				formString += '+'+multiple(reaction.products.count
-					(species.name))+'K('+str(i+1)+')'
+					(species.name))+'RATE('+str(i+1)+')'
 				
 				#now add *Y(species_index) to string for every reactant						
 				for reactant in set(reaction.reactants):

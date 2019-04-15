@@ -3,10 +3,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # Read in the data files
-t,ten = np.loadtxt('data/ten.xq',skiprows=3,unpack=True) # neutral temp
+t,ten = np.loadtxt('data/ten.xq',unpack=True) # neutral temp
 t,tei = np.loadtxt('data/tei.xq',skiprows=3,unpack=True) # ion temp
 t,tee = np.loadtxt('data/tee.xq',skiprows=3,unpack=True) # electron temp
-t,rhon = np.loadtxt('data/rhon.xq',skiprows=3,unpack=True) # neutral density
+t,rhon = np.loadtxt('data/rhon.xq',unpack=True) # neutral density
 t,rhoi = np.loadtxt('data/rhoi.xq',skiprows=3,unpack=True) # ion density
 t,rhoe = np.loadtxt('data/rhoe.xq',skiprows=3,unpack=True) # electron density
 t,rhog= np.loadtxt('data/rhog.xq',skiprows=3,unpack=True) # grain density

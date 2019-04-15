@@ -1,16 +1,19 @@
 FC = gfortran
-#FC=ifort
-FFLAGS = -O -Wall -fcheck=all -g -fbacktrace
+#FC = ifort
+FFLAGS = -O2 -fPIC -g
 #FFLAGS = -g -traceback -check all -fp-stack-check -debug all -warn -CB
 
-wardle: wardle.f90 dlsode.o
-	${FC} ${FFLAGS} -o wardle wardle.f90 dlsode.o
+wardle: wardle.f90 dvode.o
+	${FC} ${FFLAGS} -o wardle wardle.f90 dvode.o
 
 collfile.o: collfile.f
 	${FC} ${FFLAGS} collfile.f
 
 dlsode.o: dlsode.f90
 	${FC} ${FFLAGS} -c dlsode.f90
+
+dvode.o: dvode.f90
+	${FC} ${FFLAGS} -c dvode.f90
 
 clean:
 	rm ordout.d output.d wardle *.o *.mod
