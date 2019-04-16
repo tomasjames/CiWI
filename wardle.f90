@@ -290,12 +290,6 @@ PROGRAM  WARDLE
           ERAT(IER,2)=ALPHA
           ERAT(IER,3)=BETA
           ERAT(IER,4)=GAMMA
-      ELSE IF((BETA.NE.0.0).OR.(GAMMA.NE.0.0)) THEN
-          ITR=ITR+1
-          TRAT(ITR,1)=INDXJ
-          TRAT(ITR,2)=ALPHA
-          TRAT(ITR,3)=BETA
-          TRAT(ITR,4)=GAMMA
       ELSE IF (RE2(J) .EQ. 'DEUVCR') THEN
           IDEUV = IDEUV+1
           DEUVCRRAT(IDEUV,1)=INDXJ
@@ -309,7 +303,11 @@ PROGRAM  WARDLE
           DESCRRAT(IDESCR,3)=BETA
           DESCRRAT(IDESCR,4)=GAMMA
       ELSE
-          RATE(INDXJ)=ALPHA
+          ITR=ITR+1
+          TRAT(ITR,1)=INDXJ
+          TRAT(ITR,2)=ALPHA
+          TRAT(ITR,3)=BETA
+          TRAT(ITR,4)=GAMMA
       END IF
       GO TO 10
  11   NREAC=J-1
@@ -496,7 +494,7 @@ PROGRAM  WARDLE
 !--recalculate the photorates
          DO 5 I=1,IPR
              INDXJ=PRAT(I,1)
-             RATE(INDXJ)=G0*PRAT(I,2)*DEXP(-AV*PRAT(I,4))*(G0/1.7)
+             RATE(INDXJ)=G0*PRAT(I,2)*DEXP(-AV*PRAT(I,4))
  5       CONTINUE
 !--H2 and CO self-shielding factors
          RATE(361)=H2SHL*RATE(361) ! H2 is CRP
@@ -561,7 +559,7 @@ PROGRAM  WARDLE
             BETA=DESCRRAT(I,3)
             GAMMA=DESCRRAT(I,4)
 
-            RATE(IND) = 4.0*PI*(CRAT/1.3E-17)*1.64d-4*(SAPH)*(1.0/MANTLE)
+            RATE(IND) = 4.0*PI*(CRAT)*1.64d-4*(SAPH)*(1.0/MANTLE)
             ! WRITE(*,*) "RATE(",IND,")=",RATE(IND)
  4       CONTINUE
 
@@ -573,7 +571,7 @@ PROGRAM  WARDLE
 
             !4.875d3 = photon flux, Checchi-Pestellini & Aiello (1992) via Roberts et al. (2007)
             !UVY is yield per photon.
-            RATE(IND) = SAPH*0.1*4.875d3*(CRAT/1.3E-17)*(1.0/MANTLE)
+            RATE(IND) = SAPH*0.1*4.875d3*(CRAT)*(1.0/MANTLE)
             !additional factor accounting for UV desorption from ISRF. UVCREFF is ratio of 
             !CR induced UV to ISRF UV.
             RATE(IND) = RATE(IND) * (1+(1.0/1.0d-3)*(1.0/(CRAT/1.3E-17))*DEXP(-1.8*AV))
