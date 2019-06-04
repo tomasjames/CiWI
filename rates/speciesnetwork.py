@@ -2,7 +2,7 @@
 
 import csv
 
-species='H2CS'
+species='HCO+'
 
 f=open('outputFiles/reactions.csv')
 reader=csv.reader(f, delimiter=',', quotechar='|')

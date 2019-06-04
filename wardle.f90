@@ -23,15 +23,15 @@ PROGRAM  WARDLE
       USE dvode_f90_m
       IMPLICIT DOUBLE PRECISION(A-H,O-Z)
 !
-      PARAMETER(NSP=213,NEL=8,NRM=2394,NOP=18632,NG=163,NS=50)
+      PARAMETER(NSP=213,NEL=8,NRM=2392,NOP=4000,NG=163,NS=50)
 !
       CHARACTER*8  RE1(NRM),RE2(NRM),P1(NRM),P2(NRM),P3(NRM),P4(NRM), &
       &             SPECI(NSP),SPX(NEL)
       CHARACTER*25 UNIT2,UNIT3,UNIT7,UNIT8,UNITL,DGFILE,TENFILE,RHONFILE
       DOUBLE PRECISION  Y0(NSP),FRAC(NEL),DPLT(NEL),ATOL(NSP), &
-      & RATE(NRM),TRAT(NRM,4),PRAT(NRM,4),DRAT(NRM,4),ERAT(NRM,4),CRPRAT(NRM,4), &
-      & DEUVCRRAT(NRM,4), DESCRRAT(NRM,4) ,B(NSP,NOP),TAGE(NOP),T_INTERP(NOP),DG(NOP),TEN(NOP), &
-      & RHON(NOP),NON(NOP),DUMMY(NOP)
+      & RATE(NRM),TRAT(NRM,4),PRAT(NRM,4),DRAT(NRM,4),ERAT(NRM,4),DEURAT(NRM,4), &
+      & DESRAT(NRM,4),DESH2RAT(NRM,4),CRPHAT(NRM,4),B(NSP,NOP),TAGE(NOP), &
+      & T_INTERP(NOP),DG(NOP),TEN(NOP),RHON(NOP),NON(NOP),NONOUT,DUMMY(NOP),MANTLE
       INTEGER INDR(NRM),ISPX(NEL),SSTATE(NS),N
 !
 !** For LSODE
@@ -41,7 +41,7 @@ PROGRAM  WARDLE
       COMMON/BLK1/SPECI
       COMMON/BLK2/B,TAGE
       COMMON/BLK3/RATE,D
-      COMMON/BLK4/TRAT,PRAT,CRPRAT,DRAT,ERAT,DEUVCRRAT,DESCRRAT,ITR,IPR,IDR,IER,ICR,IH2,IDEUV,IDESCR
+      COMMON/BLK4/TRAT,PRAT,CRPHAT,DRAT,DEURAT,DESRAT,ITR,IPR,IDR,IDEU,IDES,IDESH2,ICR,IH2
       COMMON/BLK5/IFC,ICOV,ISURF
       COMMON/BLK6/DEN0,TEMP0,AV0
       COMMON/BLK8/GRAD,SAPH,YLD,YLD2,FSITES,G0,F0,FCR,YH,CRAT, &
@@ -137,8 +137,9 @@ PROGRAM  WARDLE
       DEFF=200.0
       ALBEDO=0.5
 !--H2 and CO shielding factors
-      H2SHL=1.0
-      COSHL=1.0
+      ! 1.0 is no shielding; 0.0 is total shielding
+      H2SHL=0.0
+      COSHL=0.0
 !
 !--Freeze-out parameters: GRAD = grain radius (in microns), SAPH = grain 
 ! surface area per H-nucleon (in cm2).
@@ -251,7 +252,7 @@ PROGRAM  WARDLE
       J=0
  10   J=J+1
       READ(8,3) INDR(J),RE1(J),RE2(J),P1(J),P2(J),P3(J),P4(J), &
-     &          ALPHA,BETA,GAMMA
+     &          ALPHA,BETA,GAMA
  ! 3    FORMAT(I4,4(1X,A8),2(1X,A4),1X,1PE8.2,1X,0PF5.2,1X,F8.1)
   3   FORMAT(I4,4(1X,A8),2(1X,A4),1X,1PE10.2,1X,0PF6.2,1X,F8.1)
       INDXJ=INDR(J)
@@ -259,55 +260,56 @@ PROGRAM  WARDLE
 ! store reaction data
 !
       IF(INDXJ.EQ.9999) GO TO 11
-      IF(RE2(J).EQ.'CRP') THEN ! CRP is proton emission induced by cosmic rays
-          ALPHA=(ALPHA/1.36E-17) ! Requires normalisation because of UMIST network
-          RATE(INDXJ)=ALPHA*CRAT 
-      ELSE IF (RE2(J).EQ.'CRPHOT') THEN ! CRPHOT is cosmic ray induced photons
+      IF(RE2(J).EQ.'CRP') THEN ! CRP is cosmic ray proton (i.e. H-nucleus)
+          RATE(INDXJ)=ALPHA
+      ELSE IF (RE2(J).EQ.'CRPHOT') THEN ! CRPHOT is cosmic ray induced photon emission
           ICR=ICR+1
-          CRPRAT(ICR,1)=INDXJ
-          CRPRAT(ICR,2)=ALPHA
-          CRPRAT(ICR,3)=BETA
-          CRPRAT(ICR,4)=GAMMA
-      ELSE IF((RE2(J).EQ.'PHOTON'.AND.(RE1(J)(1:1).NE.'#'))) THEN ! PHOTON is for standard photodesorption
+      !     IF(BETA.EQ.0.0) BETA=DEFF
+          CRPHAT(ICR,1)=INDXJ
+          CRPHAT(ICR,2)=ALPHA
+          CRPHAT(ICR,3)=BETA
+          CRPHAT(ICR,4)=GAMA*ALBFAC*CRAT
+      ELSE IF((RE2(J).EQ.'PHOTON'.AND.(RE1(J)(1:1).NE.'#'))) THEN ! PHOTON is for standard photoreactions
           IPR=IPR+1
-          IF(BETA.EQ.0.0) BETA=DEFF
           PRAT(IPR,1)=INDXJ
           PRAT(IPR,2)=ALPHA
-          PRAT(IPR,3)=BETA*ALBFAC*CRAT 
-          PRAT(IPR,4)=GAMMA
-      ELSE IF(RE2(J).EQ.'FREEZE') THEN
+          PRAT(IPR,3)=BETA
+          PRAT(IPR,4)=GAMA
+      ELSE IF ((P1(J) .EQ. 'C+') .AND. (P2(J) .EQ. 'E-')) THEN
+          RATE(INDXJ) = 0.0
+      ELSE IF(RE2(J).EQ.'FREEZE') THEN ! Freeze out
           IDR=IDR+1
           DRAT(IDR,1)=INDXJ
           DRAT(IDR,2)=ALPHA
           DRAT(IDR,3)=BETA
-          DRAT(IDR,4)=GAMMA
-!--Identify reaction number for: H + grain -> H2
+          DRAT(IDR,4)=GAMA
+          !--Identify reaction number for: H + grain -> H2
           IF(RE1(J).EQ.'H') IH2=INDXJ
-      ELSE IF((RE2(J).EQ.'PHOTON').AND.(RE1(J)(1:1).EQ.'#')) THEN
-          IER=IER+1
-          ERAT(IER,1)=INDXJ
-          IF(ALPHA.EQ.0.0) ALPHA=CRDEF
-          ERAT(IER,2)=ALPHA
-          ERAT(IER,3)=BETA
-          ERAT(IER,4)=GAMMA
       ELSE IF (RE2(J) .EQ. 'DEUVCR') THEN
-          IDEUV = IDEUV+1
-          DEUVCRRAT(IDEUV,1)=INDXJ
-          DEUVCRRAT(IDEUV,2)=ALPHA
-          DEUVCRRAT(IDEUV,3)=BETA
-          DEUVCRRAT(IDEUV,4)=GAMMA
-      ELSE IF (RE2(J) .EQ. 'DESCR') THEN
-          IDESCR = IDESCR+1
-          DESCRRAT(IDESCR,1)=INDXJ
-          DESCRRAT(IDESCR,2)=ALPHA
-          DESCRRAT(IDESCR,3)=BETA
-          DESCRRAT(IDESCR,4)=GAMMA
+          IDEU=IDEU+1
+          DEURAT(IDEU,1)=INDXJ
+          DEURAT(IDEU,2)=ALPHA
+          DEURAT(IDEU,3)=BETA
+          DEURAT(IDEU,4)=GAMA
+      ELSE IF (RE2(J) .EQ. 'DESCR') THEN 
+          IDES=IDES+1
+          DESRAT(IDES,1)=INDXJ
+          DESRAT(IDES,2)=ALPHA
+          DESRAT(IDES,3)=BETA
+          DESRAT(IDES,4)=GAMA
+      ELSE IF (RE2(J) .EQ. 'DESOH2') THEN 
+          IDESH2=IDESH2+1
+          DESH2RAT(IDESH2,1)=INDXJ
+          DESH2RAT(IDESH2,2)=ALPHA
+          DESH2RAT(IDESH2,3)=BETA
+          DESH2RAT(IDESH2,4)=GAMA
       ELSE
+          ! These are the collisional dissociation reactions
           ITR=ITR+1
           TRAT(ITR,1)=INDXJ
           TRAT(ITR,2)=ALPHA
           TRAT(ITR,3)=BETA
-          TRAT(ITR,4)=GAMMA
+          TRAT(ITR,4)=GAMA
       END IF
       GO TO 10
  11   NREAC=J-1
@@ -329,6 +331,7 @@ PROGRAM  WARDLE
             INDX = INDX + 1
             Y0(N) = 1.0E-6
             SSTATE(INDX) = INT(N)
+            MANTLE = MANTLE + Y0(N)
         END IF
 
 !-- Set elemental abundances
@@ -411,7 +414,18 @@ PROGRAM  WARDLE
          AV=((3.7D-15*1.6D21)/NONOUT)
       !    WRITE(*,*) "AV=",AV
 
-         CALL DVODE_F90(DIFFUN, NTD, Y0, T0, TOUT, ITASK, ISTATE, OPTIONS)
+ 24      CALL DVODE_F90(DIFFUN, NTD, Y0, T0, TOUT, ITASK, ISTATE, OPTIONS)
+
+         IF (ISTATE .EQ. -5) THEN
+            WRITE(*,*) "INTERPOLATING"
+            TOUT = TOUT + (T_INTERP(IRUN+1) - T_INTERP(IRUN))/2
+            DGOUT = DGOUT + (DG(IRUN+1) - DG(IRUN))/2
+            TENOUT = TENOUT + (TEN(IRUN+1) - TEN(IRUN))/2
+            NONOUT = NONOUT + (NON(IRUN+1) - NON(IRUN))/2
+            AV=((3.7D-15*1.6D21)/NONOUT)
+            GO TO 24
+         END IF
+
          DO 1001 INF=1, NRM         
             IF (RATE(INF) .GT. HUGE(dbl_prec_var)) THEN
                WRITE(*,*) "RATE(",INF,")=",RATE(INF)
@@ -452,14 +466,14 @@ PROGRAM  WARDLE
 !
       SUBROUTINE ADJUST(N,Y,YDOT)
       IMPLICIT DOUBLE PRECISION(A-H,O-Z)
-      PARAMETER(NRM=2394,NG=163,NS=50)
+      PARAMETER(NRM=2392,NG=163,NS=50)
 !
       DOUBLE PRECISION RATE(NRM),Y(N),YDOT(N), &
-     &       TRAT(NRM,4),PRAT(NRM,4),DRAT(NRM,4),ERAT(NRM,4),CRPRAT(NRM,4),DEUVCRRAT(NRM,4),DESCRRAT(NRM,4)
+     &       TRAT(NRM,4),PRAT(NRM,4),DRAT(NRM,4),DEURAT(NRM,4),DESRAT(NRM,4),CRPHAT(NRM,4)
       INTEGER SSTATE(NS)
-      DOUBLE PRECISION MANTLE
+      DOUBLE PRECISION NONOUT,MANTLE
       COMMON/BLK3/RATE,D
-      COMMON/BLK4/TRAT,PRAT,CRPRAT,DRAT,ERAT,DEUVCRRAT,DESCRRAT,ITR,IPR,IDR,IER,ICR,IH2,IDEUV,IDESCR
+      COMMON/BLK4/TRAT,PRAT,CRPHAT,DRAT,DEURAT,DESRAT,ITR,IPR,IDR,IDEU,IDES,IDESH2,ICR,IH2
       COMMON/BLK5/IFC,ICOV,ISURF
       COMMON/BLK6/DEN0,TEMP0,AV0
       COMMON/BLK8/GRAD,SAPH,YLD,YLD2,FSITES,G0,F0,FCR,YH,CRAT, &
@@ -501,7 +515,6 @@ PROGRAM  WARDLE
          RATE(2001)=COSHL*RATE(2001)
 !========= TEMPERATURE-DEPENDENT RATES & GAS-GRAIN INTERACTIONS ==============
 !
-!        TGAS=TEMP0
          TGAS=TENOUT
 !Re-calculate temperature-dependent gas-phase rates
          TINV=1.0/TGAS
@@ -512,16 +525,16 @@ PROGRAM  WARDLE
  1       CONTINUE
  !Calculate the cosmic ray induced photon rates
          DO 3 J=1,ICR
-            INDXJ=CRPRAT(J,1)
-            RATE(INDXJ)=CRPRAT(J,2)*CRPRAT(J,4)*ALBFAC*CRDEF*(T300)**CRPRAT(J,3)
+            INDXJ=CRPHAT(J,1)
+            RATE(INDXJ)=CRPHAT(J,2)*CRPHAT(J,4)*ALBFAC*CRDEF*(T300)**CRPHAT(J,3)
  3       CONTINUE
 !Re-calculate freeze-out rate coefficients
          PREFAC=3.637E3*SAPH*DSQRT(TGAS)
          POSFAC=1.0+(16.711/(GRAD*TGAS))
          NEGFAC=EXP(-16.711/(GRAD*TGAS))
 !----H2 formation (Buch and Zhang(1991), ApJ 379,647)
-         IF(TGAS.LE.300.D0) THEN
-            STICKH=((TGAS/102.D0)+1.0)**(-2.0)
+         IF(TGAS.LE.300) THEN
+            STICKH=((TGAS/102)+1.0)**(-2.0) ! Sticking probability
             GRATH=PREFAC*STICKH
          ELSE
             GRATH=0.0
@@ -535,7 +548,7 @@ PROGRAM  WARDLE
             IND=DRAT(I,1)
             ALPHA=DRAT(I,2)
             BETA=DRAT(I,3)
-            GAMMA=DRAT(I,4)
+            GAMA=DRAT(I,4)
 !
             RATE(IND)=0.0
             IF(BETA.EQ.0.0) THEN 
@@ -547,36 +560,16 @@ PROGRAM  WARDLE
             ELSE IF(BETA.EQ.1.0) THEN
                 RATE(IND)=GRATP/DSQRT(ALPHA)
                 ! WRITE(*,*) "BETA=1.0 SO RATE(IND)=",RATE(IND)
+            ELSE IF (BETA.EQ.2.0) THEN ! This is for electron freeze-out
+                CION=1.0+16.71d-4/(GRAD*TENOUT)
+                RATE(IND)=4.57d4*ALPHA*SAPH*CION
             END IF
 !--Apply freeze-out rules (to switch off rates)
-!          IF((AV.LT.AVCRIT).AND.(GAMMA.EQ.4.0)) K(IND)=0.0
-!          IF((AV.GT.AVCRIT).AND.(GAMMA.EQ.3.0)) K(IND)=0.0
+!          IF((AV.LT.AVCRIT).AND.(GAMA.EQ.4.0)) K(IND)=0.0
+!          IF((AV.GT.AVCRIT).AND.(GAMA.EQ.3.0)) K(IND)=0.0
             IF(ALPHA.EQ.3.0) RATE(IND)=0.0
  2       CONTINUE
-         DO 4 I=1,IDESCR
-            IND=DESCRRAT(I,1)
-            ALPHA=DESCRRAT(I,2)
-            BETA=DESCRRAT(I,3)
-            GAMMA=DESCRRAT(I,4)
-
-            RATE(IND) = 4.0*PI*(CRAT)*1.64d-4*(SAPH)*(1.0/MANTLE)
-            ! WRITE(*,*) "RATE(",IND,")=",RATE(IND)
- 4       CONTINUE
-
-        DO 106 I=1,IDEUV
-            IND=DESCRRAT(I,1)
-            ALPHA=DESCRRAT(I,2)
-            BETA=DESCRRAT(I,3)
-            GAMMA=DESCRRAT(I,4)
-
-            !4.875d3 = photon flux, Checchi-Pestellini & Aiello (1992) via Roberts et al. (2007)
-            !UVY is yield per photon.
-            RATE(IND) = SAPH*0.1*4.875d3*(CRAT)*(1.0/MANTLE)
-            !additional factor accounting for UV desorption from ISRF. UVCREFF is ratio of 
-            !CR induced UV to ISRF UV.
-            RATE(IND) = RATE(IND) * (1+(1.0/1.0d-3)*(1.0/(CRAT/1.3E-17))*DEXP(-1.8*AV))
- 106    CONTINUE
-!--H2 formation always on
+!--H2 formation is dependent on GRATH (see above)
          RATE(IH2)=GRATH
       END IF
 !
@@ -589,18 +582,19 @@ PROGRAM  WARDLE
 ! Fraction of binding sites occupied by #CH4 
       CH4COV=Y(21)/FSITES
       CH4COV=DMIN1(CH4COV,1.D0)
-!--switch off direct CO->CO2 conversion on grains
-      ! RATE(1133)=0.0
 !--surface chemistry control:
       IF(ISURF.EQ.1) THEN
-!--conversion of O,O+ and OH+ to CO2
-      !    RATE(1231)=FCO2*COCOV*RATE(1231)
-      !    RATE(1232)=FCO2*COCOV*RATE(1232)
-      !    RATE(1233)=FCO2*COCOV*RATE(1233)
-!--conversion of O,O+ and OH+ to H2O
-         RATE(2244)=FOX*(1.0-(FCO2*COCOV))*RATE(2244)
+!--conversion of CO2 and HCO2+ to #CO2
+         RATE(2207)=FCO2*COCOV*RATE(2207)
+         RATE(2239)=FCO2*COCOV*RATE(2239)
+!--conversion of OH, H2O, O+, OH+, H2O+, H3O+ and O to #H2O
+         RATE(2203)=FOX*(1.0-(FCO2*COCOV))*RATE(2203)
+         RATE(2206)=FOX*(1.0-(FCO2*COCOV))*RATE(2206)
          RATE(2219)=FOX*(1.0-(FCO2*COCOV))*RATE(2219)
          RATE(2225)=FOX*(1.0-(FCO2*COCOV))*RATE(2225)
+         RATE(2225)=FOX*(1.0-(FCO2*COCOV))*RATE(2225)
+         RATE(2238)=FOX*(1.0-(FCO2*COCOV))*RATE(2238)
+         RATE(2244)=FOX*(1.0-(FCO2*COCOV))*RATE(2244)
 !--conversion of O,O+ and OH+ to GO,GOH
 !          RATE(1226)=(1.0-FOX)*(1.0-(FCO2*COCOV))*RATE(1226)
 !          RATE(1228)=(1.0-FOX)*(1.0-(FCO2*COCOV))*RATE(1228)
@@ -624,44 +618,66 @@ PROGRAM  WARDLE
 ! H2 formation rate (=1/2 H-atom freeze-out rate)
       H2FORM=0.5*RATE(IH2)*Y(1)*D
 !
-      DO 6 I=1,IER
-         IND=ERAT(I,1)
-         ALPHA=ERAT(I,2)
-         BETA=ERAT(I,3)
-         GAMMA=ERAT(I,4)
+!-Cosmic ray induced desorption
+      DO 6 I=1,IDES
+         IND=DESRAT(I,1)
+         ALPHA=DESRAT(I,2)
+         BETA=DESRAT(I,3)
+         GAMA=DESRAT(I,4)
+
 !--cr desorption
-!--enhance H2O cr desorption rate
-!       IF(IND.EQ.1216) GAMMA=GAMMA*1.0
-         CRDES=ALPHA*(CRAT/1.3E-17)
-!--direct photodesorption + cr-induced photodesorption
+        CRDES=ALPHA*CRAT
+
+!cr-induced photodesorption
+         PINDIR=SAPH*YLD2*FCR*CRDES
+         RATE(IND)=PINDIR
+         !    PHDES=PINDIR
+ 6 CONTINUE
+
+!-UV induced cosmic ray desorption
+      DO 70 I=1,IDEU
+         IND=DEURAT(I,1)
+         ALPHA=DEURAT(I,2)
+         BETA=DEURAT(I,3)
+         GAMA=DEURAT(I,4)
+
+!--direct photodesorption
          PDIR=SAPH*YLD*G0*F0*DEXP(-1.8*AV)
-         PINDIR=SAPH*YLD2*FCR*(CRAT/1.3E-17)
-         PHDES=PDIR+PINDIR
-!--photodesorption yield for GO->O reduced by factor of 10
-      !    IF(IND.EQ.1229) PHDES=0.1*PHDES
-!--H2 formation-induced desorption
-         H2DES=YH*H2FORM
-!--correct for total surface coverage, when necessary
-         IF(COV.LT.1.0) THEN
-            PHDES=PHDES/FSITES
-            H2DES=H2DES/FSITES
-         ELSE
-            IDSP=IDINT(BETA)
-!--approximation 1: fractional surface coverage = x(i)/x(tot)
-            PHDES=PHDES/TOTS
-            H2DES=H2DES/TOTS
-         END IF
-!--inhibit surface desorption yields for H2O if CO or CO2 coverage is high
-         IF((IND.EQ.2298.OR.IND.EQ.2299).AND.(ICOV.EQ.1)) THEN
-            CAP=DMIN1((COCOV+CO2COV+CH4COV),1.D0)
-            PHDES=PHDES*(1.0-CAP)
-!           PHDES=0.0
-!           H2DES=H2DES*(1.0-CAP)
-         END IF        
-!--yield for GH2O->OH+H set to photodesorption yield for GH2O->H2O times 2
-         IF(IND.EQ.2298.OR.IND.EQ.2299) PHOH=2.0*FDES*PHDES
-         RATE(IND)=FDES*(CRDES+PHDES+H2DES)
- 6    CONTINUE
+         RATE(IND)=PDIR
+      !    PHDES=PDIR
+ 70 CONTINUE
+
+ ! Turn off C ionisation
+      IF (IND.EQ.356) RATE(INDXJ) = 0.0
+      IF (IND.EQ.379) RATE(INDXJ) = 0.0
+      IF (IND.EQ.1973) RATE(INDXJ) = 0.0
+
+! !--photodesorption yield for #O->O2 reduced by factor of 10
+!          IF(IND.EQ.2329) PHDES=0.1*PHDES
+!          IF(IND.EQ.2330) PHDES=0.1*PHDES
+! !--H2 formation-induced desorption
+!          H2DES=YH*H2FORM
+! !--correct for total surface coverage, when necessary
+!          IF(COV.LT.1.0) THEN
+!             PHDES=PHDES/FSITES
+!             H2DES=H2DES/FSITES
+!          ELSE
+!             IDSP=IDINT(BETA)
+! !--approximation 1: fractional surface coverage = x(i)/x(tot)
+!             PHDES=PHDES/TOTS
+!             H2DES=H2DES/TOTS
+!          END IF
+! !--inhibit surface desorption yields for H2O if CO or CO2 coverage is high
+!          IF((IND.EQ.2298.OR.IND.EQ.2299).AND.(ICOV.EQ.1)) THEN
+!             CAP=DMIN1((COCOV+CO2COV+CH4COV),1.D0)
+!             PHDES=PHDES*(1.0-CAP)
+! !           PHDES=0.0
+! !           H2DES=H2DES*(1.0-CAP)
+!          END IF        
+! !--yield for GH2O->OH+H set to photodesorption yield for GH2O->H2O times 2
+!          IF(IND.EQ.2298.OR.IND.EQ.2299) PHOH=2.0*FDES*PHDES
+!       !    RATE(IND)=FDES*(CRDES+PHDES+H2DES)
+!  6    CONTINUE
 !
       RETURN
       END SUBROUTINE ADJUST
@@ -673,7 +689,7 @@ PROGRAM  WARDLE
         DOUBLE PRECISION PROD,LOSS
         DOUBLE PRECISION RATE
 !
-        PARAMETER(NRM=2394,NSP=213,NG=163,NS=50)
+        PARAMETER(NRM=2392,NSP=213,NG=163,NS=50)
 !
         INTEGER SSTATE(NS)
         DIMENSION RATE(NRM),Y(N),YDOT(N)
@@ -681,8 +697,8 @@ PROGRAM  WARDLE
         COMMON /BLK9/FCO2,COCOV,FOX,PHOH,H2SHL,COSHL,FFRZ,FDES
         COMMON /BLK11/SSTATE
 !
-        CALL ADJUST(N,Y,YDOT)
         INCLUDE 'odes.f90'
+        CALL ADJUST(N,Y,YDOT)
 
         RETURN
       END SUBROUTINE DIFFUN
@@ -690,7 +706,7 @@ PROGRAM  WARDLE
 !-- Subroutine to write out the results ---------------------------------------
       SUBROUTINE RESULT(IRUN,NMAX,IFULL,LOUT)
       IMPLICIT DOUBLE PRECISION(A-H,O-Z)
-      PARAMETER(NSP=213,NOP=18632)
+      PARAMETER(NSP=213,NOP=4000)
 !
       DIMENSION B(NSP,NOP),BL(NSP,NOP),TAGE(NOP)
       CHARACTER*8 SPECI(NSP)
@@ -765,11 +781,11 @@ PROGRAM  WARDLE
 !------------------------------------------------------------------------------
       IMPLICIT DOUBLE PRECISION(A-H,O-Z)
 !
-      PARAMETER(NSP=100,NCONS=2,NRM=1500,NSEL=16)
+      PARAMETER(NSP=213,NRM=2392,NSEL=16)
 !
       CHARACTER*8 R1(NRM),R2(NRM),P1(NRM),P2(NRM),P3(NRM),P4(NRM), &
                  SPECI(NSP),SPSEL(NSEL),SPEC
-      REAL*8 G(NRM),R(NRM),X(NSP),Y0(NSP),XS(NCONS),TOT(NCONS),FLAG(10)
+      REAL*8 G(NRM),R(NRM),X(NSP),Y0(NSP),FLAG(10)
       INTEGER INDXJ(NRM),LAB(10) 
 !
       COMMON/BLK1/SPECI

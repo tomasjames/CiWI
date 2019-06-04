@@ -18,35 +18,37 @@ dg_file = np.loadtxt('data/dg.xq',skiprows=3)
 dg = dg_file[:,1]
 # species = wardle_output[0:, 1:]
 
-HCO = wardle_output[:, 1]
-HCOp = wardle_output[:,2]
-CO = wardle_output[:, 3]
-H = wardle_output[:,4]
-C = wardle_output[:, 5]
-O = wardle_output[:, 6]
+HCO = wardle_output[:, 2]
+HCOp = wardle_output[:,3]
+CO = wardle_output[:, 6]
+H2 = wardle_output[:,3]
+HCN = wardle_output[:, 4]
+HNC = wardle_output[:, 5]
+CH3OH = wardle_output[:, 7]
 
 fig,ax=plt.subplots()
 
 #ax.loglog(10**time, 10**HNCO, label=r"$HNCO$",linewidth=1.0)
 ax.loglog(10**time, 10**HCO, label=r"$HCO$",linewidth=1.0)
 ax.loglog(10**time, 10**HCOp, label=r"$HCO+$",linewidth=1.0)
-#ax.loglog(10**time, 10**CO, label=r"$CO$",linewidth=1.0)
+# ax.loglog(10**time, 10**CO, label=r"$CO$",linewidth=1.0)
 #ax.loglog(10**time, 10**HNC, label=r"$HNC$",linewidth=1.0)
-#ax.loglog(10**time, 10**H, label=r"$H$",linewidth=1.0)
-#ax.loglog(10**time, 10**C, label=r"$C$",linewidth=1.0)
-#ax.loglog(10**time, 10**O, label=r"$O$",linewidth=1.0)
+# ax.loglog(10**time, 10**CH3OH, label=r"$CH_{3}OH$", linewidth=1.0)
+# ax.loglog(10**time, 10**C, label=r"$C$",linewidth=1.0)
+# ax.loglog(10**time, 10**O, label=r"$O$",linewidth=1.0)
+# ax.loglog(10**time, 10**COp, label=r"$CO+$", linewidth=1.0)
 ax.set_xlabel('t (yrs)')
 ax.set_ylabel(r'$X_{species}$')
 ax2=ax.twinx()
-ax2.loglog(mhd_time/(3.154e7),dg,label="d:g",linestyle='--',linewidth=0.5)
-ax2.set_ylabel('d:g')
+ax2.loglog(mhd_time/(3.154e7),mhd_temp,label="T",linestyle='--',linewidth=0.5)
+ax2.set_ylabel('T (K)')
 h1, l1 = ax.get_legend_handles_labels()
 h2, l2 = ax2.get_legend_handles_labels()
 legend = ax.legend(h1+h2, l1+l2, loc='best')
 # legend.get_frame().set_facecolor('#ffffff')
 legend.set_zorder(20)
 #ax2.set_xlim([1e2,1e3])
-plt.savefig('dgabundances.png', dpi=500,bbox_inches='tight')
+plt.savefig('Tabundances.png', dpi=500, bbox_inches='tight')
 plt.close()
 
 # fig,ax=plt.subplots()

@@ -1,6 +1,6 @@
 FC = gfortran
 #FC = ifort
-FFLAGS = -O2 -fPIC -g
+FFLAGS = -O2 -fPIC -g -fno-align-commons
 #FFLAGS = -g -traceback -check all -fp-stack-check -debug all -warn -CB
 
 wardle: wardle.f90 dvode.o

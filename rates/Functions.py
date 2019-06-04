@@ -295,13 +295,10 @@ def write_reactions(fileName, speciesList, reactionList):
 			for reactant in reaction.reactants:
 				if reactant == "NAN" or reactant == "FREEZE":
 					continue
-				print("reactant={0}").format(reactant)
 				for species in speciesList:
-					print("species.name={0}").format(species.name)
 					if reactant == species.name:
 						# print("species.name={0}").format(species.name)
 						mass = int(species.mass)
-						print("reaction.gamma={0}").format(mass)
 						writer.writerow(reaction.reactants+reaction.products+[reaction.alpha, reaction.beta, mass, reaction.templow, reaction.temphigh])
 		else:
 			writer.writerow(reaction.reactants+reaction.products+[reaction.alpha,reaction.beta,reaction.gamma,reaction.templow,reaction.temphigh])
