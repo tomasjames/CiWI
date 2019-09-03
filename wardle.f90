@@ -259,6 +259,7 @@ PROGRAM  WARDLE
 !
 ! store reaction data
 !
+      BETA = 0
       IF(INDXJ.EQ.9999) GO TO 11
       IF(RE2(J).EQ.'CRP') THEN ! CRP is cosmic ray proton (i.e. H-nucleus)
           RATE(INDXJ)=ALPHA
@@ -329,7 +330,7 @@ PROGRAM  WARDLE
             Y0(N) = XFRAC 
         ELSE IF (SPECI(N)(1:1) .EQ. "#") THEN !-- Set the solid state abundances to 0 (i.e. nothing on the grains)
             INDX = INDX + 1
-            Y0(N) = 1.0E-6
+            Y0(N) = 1.0E-30
             SSTATE(INDX) = INT(N)
             MANTLE = MANTLE + Y0(N)
         END IF
@@ -391,6 +392,7 @@ PROGRAM  WARDLE
       JAC='DUMMY'
       ITASK=1
       IOPT=1
+      IOTYP=0
       RTOL=1.0E-4
       ATOL=RTOL*Y0
       WHERE(ATOL<1E-30) ATOL=1E-30 ! to a minimum degree
@@ -414,17 +416,17 @@ PROGRAM  WARDLE
          AV=((3.7D-15*1.6D21)/NONOUT)
       !    WRITE(*,*) "AV=",AV
 
- 24      CALL DVODE_F90(DIFFUN, NTD, Y0, T0, TOUT, ITASK, ISTATE, OPTIONS)
+         CALL DVODE_F90(DIFFUN, NTD, Y0, T0, TOUT, ITASK, ISTATE, OPTIONS)
 
-         IF (ISTATE .EQ. -5) THEN
-            WRITE(*,*) "INTERPOLATING"
-            TOUT = TOUT + (T_INTERP(IRUN+1) - T_INTERP(IRUN))/2
-            DGOUT = DGOUT + (DG(IRUN+1) - DG(IRUN))/2
-            TENOUT = TENOUT + (TEN(IRUN+1) - TEN(IRUN))/2
-            NONOUT = NONOUT + (NON(IRUN+1) - NON(IRUN))/2
-            AV=((3.7D-15*1.6D21)/NONOUT)
-            GO TO 24
-         END IF
+      !    IF (ISTATE .EQ. -5) THEN
+      !       WRITE(*,*) "INTERPOLATING"
+      !       TOUT = TOUT + (T_INTERP(IRUN+1) - T_INTERP(IRUN))/2
+      !       DGOUT = DGOUT + (DG(IRUN+1) - DG(IRUN))/2
+      !       TENOUT = TENOUT + (TEN(IRUN+1) - TEN(IRUN))/2
+      !       NONOUT = NONOUT + (NON(IRUN+1) - NON(IRUN))/2
+      !       AV=((3.7D-15*1.6D21)/NONOUT)
+      !       GO TO 24
+      !    END IF
 
          DO 1001 INF=1, NRM         
             IF (RATE(INF) .GT. HUGE(dbl_prec_var)) THEN
@@ -443,8 +445,7 @@ PROGRAM  WARDLE
  45      CONTINUE
          IF(ISTATE.NE.2) go to 46 
 !---Call order if appropriate
-         IF((IRUN.EQ.IT1).OR.(IRUN.EQ.IT2).OR. &
-     &      (IRUN.EQ.IT3).OR.(IRUN.EQ.IT4)) THEN
+         IF ((TOUT/YEAR .gt. 1e2) .AND. (TOUT/YEAR .lt. 1e3)) THEN
             RORD=0.0
             TORD=TOUT/YEAR
             CALL ORDER(NG,NTD,Y0,RORD,TORD)
@@ -511,10 +512,12 @@ PROGRAM  WARDLE
              RATE(INDXJ)=G0*PRAT(I,2)*DEXP(-AV*PRAT(I,4))
  5       CONTINUE
 !--H2 and CO self-shielding factors
-         RATE(361)=H2SHL*RATE(361) ! H2 is CRP
+         RATE(359)=H2SHL*RATE(359) ! H2 is dissociated by CRP
+         RATE(360)=H2SHL*RATE(360) 
+         RATE(361)=H2SHL*RATE(361) 
+
          RATE(2001)=COSHL*RATE(2001)
 !========= TEMPERATURE-DEPENDENT RATES & GAS-GRAIN INTERACTIONS ==============
-!
          TGAS=TENOUT
 !Re-calculate temperature-dependent gas-phase rates
          TINV=1.0/TGAS
@@ -560,7 +563,7 @@ PROGRAM  WARDLE
             ELSE IF(BETA.EQ.1.0) THEN
                 RATE(IND)=GRATP/DSQRT(ALPHA)
                 ! WRITE(*,*) "BETA=1.0 SO RATE(IND)=",RATE(IND)
-            ELSE IF (BETA.EQ.2.0) THEN ! This is for electron freeze-out
+            ELSE IF (BETA.EQ.2.0) THEN ! This is for electron freeze-out (not really freeze-out, just grain-e- attraction)
                 CION=1.0+16.71d-4/(GRAD*TENOUT)
                 RATE(IND)=4.57d4*ALPHA*SAPH*CION
             END IF
@@ -697,8 +700,8 @@ PROGRAM  WARDLE
         COMMON /BLK9/FCO2,COCOV,FOX,PHOH,H2SHL,COSHL,FFRZ,FDES
         COMMON /BLK11/SSTATE
 !
-        INCLUDE 'odes.f90'
         CALL ADJUST(N,Y,YDOT)
+        INCLUDE 'odes.f90'
 
         RETURN
       END SUBROUTINE DIFFUN
@@ -713,8 +716,8 @@ PROGRAM  WARDLE
       COMMON/BLK1/SPECI
       COMMON/BLK2/B,TAGE
 !--List of selected species numbers (for reduced output)
-! [HNCO,HCO,HCO+,HCN,HNC,NH3,CH3OH,H] 
-      DATA J1,J2,J3,J4,J5,J6,J7,J8/144,74,75,56,58,30,98,1/
+! [CO,OH,H2O,HCN,HNC,NH3,CH3OH,HCO] 
+      DATA J1,J2,J3,J4,J5,J6,J7,J8/64,32,35,56,58,30,98,74/
 !
 !---Put the B and TAGE arrays into appropriate forms
       DO 1 I=1,IRUN
@@ -781,7 +784,7 @@ PROGRAM  WARDLE
 !------------------------------------------------------------------------------
       IMPLICIT DOUBLE PRECISION(A-H,O-Z)
 !
-      PARAMETER(NSP=213,NRM=2392,NSEL=16)
+      PARAMETER(NSP=213,NRM=2392,NSEL=3)
 !
       CHARACTER*8 R1(NRM),R2(NRM),P1(NRM),P2(NRM),P3(NRM),P4(NRM), &
                  SPECI(NSP),SPSEL(NSEL),SPEC
@@ -793,12 +796,13 @@ PROGRAM  WARDLE
       COMMON/ORDER1/R1,R2,P1,P2,P3,P4
       COMMON/ORDER2/INDXJ,IOTYP
 !
-      DATA  SPSEL/'N2H+','N2','NH3','ELECTR','CO','C','C+','HCO+', &
-           'CS','O','H2O','GNH3','GN2','GCO','GH2O','GO2'/
+      ! DATA  SPSEL/'N2H+','N2','NH3','ELECTR','CO','C','C+','HCO+', &
+      !      'CS','O','H2O','#NH3','#N2','#CO','#H2O','#O2'/
 !      DATA (SPSEL(I),I=1,33)/'H2+','H3+','CH','CH+','CH2','CH2+','CH3+',
 !     *     'CN','N2','N2H+','N+','NH','NH+','NH2','NH2+','NH3+','NH4+',
 !     *     'NH3','H2NC+','NO','HCO+','H3O+','OH','O2','CO','C2H+','H+',
 !     *     'HE+','C+','S+','C2S','HC2S+','ELECTR'/
+      DATA SPSEL/'HCO','HCO+','H2CO'/
       DATA LOR/2/
 !
       WRITE(LOR,4) RAD,TIME
@@ -807,22 +811,22 @@ PROGRAM  WARDLE
       DO 112 K1=1,NRM
          G(K1) = R(K1)
  112  CONTINUE
-      DO 113 K1=1,NCONS
-         X(K1) = XS(K1)*D
- 113  CONTINUE
+!       DO 113 K1=1,NCONS
+!          X(K1) = XS(K1)*D
+!  113  CONTINUE
       DO 114 K1=1,NTD
-         X(NCONS+K1) = Y0(K1)*D
+         X(K1) = Y0(K1)*D
  114  CONTINUE
-      NTOT=NTD+NCONS
+      NTOT=NTD
 !
       DO 1 J=1,NRM
         IF(INDXJ(J).EQ.9999) GO TO 2
         DO 14 LI=1,NTOT
-           IF(R1(J).EQ.SPECI(LI)) G(J)=G(J)*X(LI)
-           IF(R2(J).EQ.SPECI(LI)) G(J)=G(J)*X(LI)
+            IF(R1(J).EQ.SPECI(LI)) G(J)=G(J)*X(LI)
+            IF(R2(J).EQ.SPECI(LI)) G(J)=G(J)*X(LI)
  14     CONTINUE
-        IF(R1(J).EQ.'G') G(J)=G(J)*D
-        IF(R2(J).EQ.'G') G(J)=G(J)*D
+        IF(R1(J).EQ.'FREEZE') G(J)=G(J)*D
+        IF(R2(J).EQ.'FREEZE') G(J)=G(J)*D
  1    CONTINUE
  2    L=J-1
 !
