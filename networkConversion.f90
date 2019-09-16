@@ -11,7 +11,7 @@
         & index
     INTEGER NG,NS,EFI
     DATA    NG,NS/0,0/
-    PARAMETER(reactionFileLength=2391,speciesFileLength=213)
+    PARAMETER(reactionFileLength=2344,speciesFileLength=214)
     CHARACTER*40 reactionFileInput,reactionFileOutput,speciesFileInput, &
                 & speciesFileOutput
     CHARACTER*8, DIMENSION(3,reactionFileLength) :: REACT
