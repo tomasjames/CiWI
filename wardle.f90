@@ -331,16 +331,34 @@
 !--Set the density
       D=DEN0
 !
+!-- Set some flags for the integration process
+      STATIC=1
       ISTATE=1
       IFC=1
       T0=0.0
       TOUT=TMIN/TINC
+      WRITE(*,*) "TOUT=",TOUT/YEAR
 !---------------------------------INTEGRATION LOOP-------------------------------
-      IRUN=0
- 23      TOUT=TOUT*TINC
- 
+      IRUN = 0
+ 23      IRUN = IRUN + 1
+          !-- Evolve the time statically if STATIC=1
+         IF ((TOUT/YEAR .LE. 1e6) .AND. (STATIC .EQ. 1)) THEN
+            TOUT = (TOUT) * 10
+            IRUN = 0
+         ELSE 
+            IF (IRUN .EQ. 1) THEN
+                T0 = 0.0
+                TOUT=TMIN/TINC
+                ISTATE = 1
+                STATIC = 0   
+                WRITE(*,*) "T0=0.0"
+                WRITE(*,*) "TOUT=",TOUT/YEAR
+            END IF
+            TOUT=(TOUT*TINC)
+            WRITE(*,*) "TOUT=",TOUT/YEAR
+         END IF
          !-- Catch any abundances that drop below a minimum threshold
-         DO N=1,NTOT
+         DO N = 1,NTOT
             IF (Y0(N) .lt. 1D-30) Y0(N) = 1D-30
          END DO
 !
@@ -348,7 +366,6 @@
      &               ISTATE,IOPT,RWORK,LRW,IWORK,LIW,JAC,MF)
          IF(ISTATE.NE.2) WRITE(LRUN,201) ISTATE
 !--Store the results
-         IRUN=IRUN+1
          TAGE(IRUN)=TOUT/YEAR
          B(1,IRUN)=X(1)
          B(2,IRUN)=X(2)
@@ -491,7 +508,6 @@
          ACCR=ACCR+DMAX1(YDOT(I),0.D0)
  7    CONTINUE
       COV=TOTS/FSITES
-      WRITE(*,*) "COV=",COV
 !-- H2 formation rate (=1/2 H-atom freeze-out rate)
       H2FORM=0.5*K(IH2)*Y(1)*D
 !
