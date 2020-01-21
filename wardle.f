@@ -22,15 +22,14 @@ C------------------------------------------------------------------------------
 C
       IMPLICIT DOUBLE PRECISION(A-H,O-Z)
 C
-      PARAMETER(NSP=100,NEL=6,NCONS=2,NRM=1500,NOP=2228)
+      PARAMETER(NSP=100,NEL=6,NCONS=2,NRM=1500,NOP=100)
 C
       CHARACTER*8  RE1(NRM),RE2(NRM),P1(NRM),P2(NRM),P3(NRM),P4(NRM),
      *             SPECI(NSP),SPX(NEL)
-      CHARACTER*25 UNIT2,UNIT3,UNIT7,UNIT8,UNITL,DGFILE,TENFILE,RHONFILE
+      CHARACTER*25 UNIT2,UNIT3,UNIT7,UNIT8,UNITL
       REAL*8  Y0(NSP),FRAC(NEL),DPLT(NEL),TOTAL(NCONS),X(NCONS),
      * K(NRM),TRAT(NRM,4),PRAT(NRM,4),DRAT(NRM,4),ERAT(NRM,4),
-     * B(NSP,NOP),TAGE(NOP),T_INTERP(NOP),DG(NOP),TEN(NOP),
-     * RHON(NOP),NON(NOP),DUMMY(NOP)
+     * B(NSP,NOP),TAGE(NOP)
       INTEGER INDR(NRM),ISPX(NEL)
 C
 C** For LSODE
@@ -48,7 +47,6 @@ C**
       COMMON/BLK8/GRAD,SAPH,YLD,YLD2,FSITES,G0,F0,FCR,YH,CRAT,
      *            STICK0,STICKP,STICKN
       COMMON/BLK9/FCO2,COCOV,FOX,PHOH,H2SHL,COSHL,FFRZ,FDES
-      COMMON/BLK10/T0,TOUT,DG0,DGOUT,TEN0,TENOUT,NON0,NONOUT
       COMMON/ORDER1/RE1,RE2,P1,P2,P3,P4
       COMMON/ORDER2/INDR,IOTYP
 C
@@ -78,8 +76,8 @@ C** For LSODE
       IOPT=0
       LRW=11000
       LIW=120
-      RTOL=1.0E-6
-      ATOL=1.0E-16
+      RTOL=1.0E-3
+      ATOL=1.0E-15
 C**
 C
 C--NTD is the total number of time-dependent chemical species
@@ -97,29 +95,6 @@ C----I/O files
       UNITL='report.d'
       UNIT7='coll_specs.d'
       UNIT8='coll_rates.d'
-      DGFILE='interp/dg_interp.dat'
-      TENFILE='interp/ten_interp.dat'
-      RHONFILE='interp/rhon_interp.dat'
-
-C------------------------------------------------------------------------------
-C
-C     Read the data
-      OPEN(20,FILE=DGFILE,STATUS='OLD')
-      OPEN(21,FILE=TENFILE,STATUS='OLD')
-      OPEN(22,FILE=RHONFILE,STATUS='OLD')
-
-      DO i=1,NOP
-            READ(20,*) T_INTERP(i),DG(i)
-            READ(21,*) DUMMY(i),TEN(i)
-            READ(22,*) DUMMY(i),RHON(i)
-
-            WRITE(*,*) "DG(i)=",DG(i)
-
-C           Convert mass density to number density
-            NON(i)=RHON(i)/(2*1.67D-24)
-      END DO
-C
-C------------------------------------------------------------------------------
 C--ORDER  is called at time points: IT1,IT2,IT3,IT4.
 C  IOTYP=0,1,2 (selected/gas-phase/full o/p)
       IT1=2
@@ -132,27 +107,20 @@ C--IFULL=0,1 for reduced/full output of abundances
 C--IPLOT=0,1 for reduced/full plotting
       IPLOT=1
 C--Density, temperature and extinction
-C      DEN0=1.0D6
-C      TEMP0=10.0
-C      AV0=5.0
-      DEN0=NON(1)
-      TEMP0=TEN(1)
+      DEN0=1.0D6
+      TEMP0=10.0
       AV0=5.0
 C--Fraction of dust present
-C      FDUST=0.01
-      FDUST=DG(1)
+      FDUST=0.01
 C--Metallicity fraction
       FRM=100.0
 C
-C      XFRAC=1.0D-20
-C      HFRAC=1.0/DEN0
-      XFRAC=6.2285D-08
+      XFRAC=1.0D-20
       HFRAC=1.0/DEN0
 C
-C      TMIN=100.0*YEAR
-C      TMAX=1.0E7*YEAR
-C      TINC=10.0**(0.1)
-      TMAX=T_INTERP(NOP)
+      TMIN=100.0*YEAR
+      TMAX=1.0E7*YEAR
+      TINC=10.0**(0.01)
 C--Photochemistry parameters
       CRAT=1.3E-16
       DEFF=200.0
@@ -282,6 +250,8 @@ C
       IF(INDXJ.EQ.9999) GO TO 11
       IF(RE2(J).EQ.'CRP') THEN
           K(INDXJ)=GAMMA*CRAT
+          WRITE(*,*) "RE2(J)=",RE2(J)
+          WRITE(*,*) "K(",INDXJ,")=GAMMA*CRAT=",GAMMA*CRAT
       ELSE IF((RE2(J).EQ.'PHOTON').AND.(P2(J).NE.'G')) THEN
           IPR=IPR+1
           IF(BETA.EQ.0.0) BETA=DEFF
@@ -352,28 +322,19 @@ C--Set solid state abundances to zero
       DO 27 I=NG+1,NTD
  27   Y0(I)=0.0
 C
+C--Set the elemental abundances
+      DO 28 J=1,NEL
+28    Y0(ISPX(I)) = FRAC(ISPX(I))*(DPLT(ISPX(I)))
 C--Set the density
       D=DEN0
 C
       ISTATE=1
-      IFC=0
-      T0=T_INTERP(1)
-C      DG0=DG(1)
-      DG0=FDUST
-      TEN0=TEN(1)
-      NON0=NON(1)
-C      TOUT=TMIN/TINC
+      IFC=1
+      T0=0.0
+      TOUT=TMIN/TINC
 C---------------------------------INTEGRATION LOOP-------------------------------
-      IRUN=2
-C 23      TOUT=TOUT*TINC
- 23      TOUT=T_INTERP(IRUN)
-         WRITE(*,*) "TOUT=",TOUT
-         DGOUT=DG(IRUN)         
-         WRITE(*,*) "DGOUT=",DGOUT
-         TENOUT=TEN(IRUN)
-         WRITE(*,*) "TENOUT=",TENOUT
-         NONOUT=NON(IRUN)
-         WRITE(*,*) "NONOUT=",NONOUT
+      IRUN=0
+ 23      TOUT=TOUT*TINC
 C
          CALL DLSODE(DIFFUN,N,Y0,T0,TOUT,ITOL,RTOL,ATOL,ITASK,
      *               ISTATE,IOPT,RWORK,LRW,IWORK,LIW,JAC,MF)
@@ -422,24 +383,12 @@ C
       COMMON/BLK8/GRAD,SAPH,YLD,YLD2,FSITES,G0,F0,FCR,YH,CRAT,
      *            STICK0,STICKP,STICKN
       COMMON/BLK9/FCO2,COCOV,FOX,PHOH,H2SHL,COSHL,FFRZ,FDES
-      COMMON/BLK10/T0,TOUT,DG0,DGOUT,TEN0,TENOUT,NON0,NONOUT
 C
       AV=AV0
-      IF(IFC.EQ.0) THEN
-C
-C================================= D:G RATIO ==============================
-C
-C         WRITE(*,*) "DGOUT =",DGOUT
-         SAPH=DGOUT*8.0E-21
-         SBIND=1.0E15
-         FSITES=SAPH*SBIND
-C
-C================================== DENSITY ===============================
-C
-         D=NONOUT
-C
+      IF(IFC.EQ.1) THEN
 C================================ PHOTORATES ==============================
 C
+      !    WRITE(*,*) "K=",K
 C--recalculate the photorates
          DO 5 I=1,IPR
              INDXJ=PRAT(I,1)
@@ -450,8 +399,7 @@ C--H2 and CO self-shielding factors
          K(1066)=COSHL*K(1066)
 C========= TEMPERATURE-DEPENDENT RATES & GAS-GRAIN INTERACTIONS ==============
 C
-C         TGAS=TEMP0
-         TGAS=TENOUT
+         TGAS=TEMP0
 C Re-calculate temperature-dependent gas-phase rates
          TINV=1.0/TGAS
          T300=TGAS/300.0
@@ -535,6 +483,7 @@ C  Total surface coverage & net accretion rate (excluding negative terms)
          ACCR=ACCR+DMAX1(YDOT(I),0.D0)
  7    CONTINUE
       COV=TOTS/FSITES
+      WRITE(*,*) "COV=",COV
 C  H2 formation rate (=1/2 H-atom freeze-out rate)
       H2FORM=0.5*K(IH2)*Y(1)*D
 C
@@ -585,16 +534,15 @@ C
 C-- Subroutine to write out the results ---------------------------------------
       SUBROUTINE RESULT(IRUN,NMAX,IFULL,LOUT)
       IMPLICIT DOUBLE PRECISION(A-H,O-Z)
-      PARAMETER(NSP=100,NOP=2228)
+      PARAMETER(NSP=100,NOP=100)
 C
       DIMENSION B(NSP,NOP),BL(NSP,NOP),TAGE(NOP)
       CHARACTER*8 SPECI(NSP)
       COMMON/BLK1/SPECI
       COMMON/BLK2/B,TAGE
 C--List of selected species numbers (for reduced output)
-C  [HCO+,H2CO,CS,N2H+,NH3,C,OH,ELECTR] +2 for conserved species
-C      DATA J1,J2,J3,J4,J5,J6,J7,J8/48,49,74,35,30,10,40,2/
-      DATA J1,J2,J3,J4,J5,J6,J7,J8/56,58,13,42,30,40,2,128/
+C  [HCO+,HCO,CS,N2H+,NH3,C,OH,H2] +2 for conserved species
+      DATA J1,J2,J3,J4,J5,J6,J7,J8/48,47,74,35,30,10,40,2/
 C
 C---Put the B and TAGE arrays into appropriate forms
       DO 1 I=1,IRUN
