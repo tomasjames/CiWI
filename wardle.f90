@@ -28,14 +28,14 @@ PROGRAM  WARDLE
 !
       CHARACTER*25  RE1(NRM),RE2(NRM),P1(NRM),P2(NRM),P3(NRM),P4(NRM), &
       &             SPECI(NSP),SPX(NEL)
-      CHARACTER*25 UNIT2,UNIT3,UNIT7,UNIT8,UNITL,DGFILE,TENFILE,RHONFILE, &
+      CHARACTER*25 UNIT2,UNIT3,UNIT4,UNIT7,UNIT8,UNITL,DGFILE,TENFILE,RHONFILE, &
       &             RHOEFILE, RHOIFILE
       DOUBLE PRECISION  Y0(NSP),FRAC(NEL),DPLT(NEL),ATOL(NSP), &
       & RATE(NRM),TRAT(NRM,4),PRAT(NRM,4),DRAT(NRM,4),ERAT(NRM,4),DEURAT(NRM,4), &
       & DESRAT(NRM,4),DESH2RAT(NRM,4),CRPHAT(NRM,4),B(NSP,NOP),TAGE(NOP), &
       & T_INTERP(NOP),DG(NOP),TEN(NOP),RHON(NOP),RHOE(NOP),RHOI(NOP),NON(NOP), &
       & NOE(NOP),NOI(NOP),NONOUT,DUMMY(NOP)
-      DOUBLE PRECISION MANTLE
+      DOUBLE PRECISION IONSUM
       INTEGER INDR(NRM),ISPX(NEL),SSTATE(NS),N
       INTEGER GRINHIB,STATIC
 !
@@ -138,7 +138,7 @@ PROGRAM  WARDLE
 !
 !------------------------------------------------------------------------------
 !--IFULL=0,1 for reduced/full output of abundances 
-      IFULL=0
+      IFULL=1
 !--Density, temperature and extinction
       DEN0=NON(1)
       TEMP0=TEN(1)
@@ -325,88 +325,54 @@ PROGRAM  WARDLE
       IF(LRUN.NE.6) OPEN(LRUN,FILE=UNITL,STATUS='NEW')
       OPEN(2,FILE=UNIT2,STATUS='UNKNOWN') 
 !
+      IONSUM = 0.0
+!** Total abundances for H
+      fh = 0.0
+!--- Set abundances
       N = 1
       INDX = 0
       DO N = 1, NTOT
-        ! IF (SPECI(N)(1:1) .NE. "#") THEN
-        !     DO M=1,25
-        !        ! Set the ion abundances
-        !        IF ((SPECI(N)(M:M) .EQ. "+") .OR. (SPECI(N)(M:M) .EQ. "-")) THEN
-        !           WRITE(*,*) SPECI(N)
-        !           ! Y0(N) = (NOI(1)/DEN0)
-        !           Y0(N) = 0.0
-        !        ELSE
-        !           Y0(N) = DEN0 ! From UCLCHEM's chemistry.f90
-        !        END IF
-        !     END DO
-        ! ELSE IF (SPECI(N)(1:1) .EQ. "#") THEN ! Set the solid state abundances 
-        !     INDX = INDX + 1
-        !     Y0(N) = 0.0
-        !     SSTATE(INDX) = INT(N)
-        !     MANTLE = MANTLE + Y0(N)
-        ! END IF
+        ! Set everything to 0.0 initially
         Y0(N) = 0.0
-!-- Set elemental abundances
+
+        !-- Set elemental abundances where required
         DO M=1,NEL
           IF (N.EQ.ISPX(M)) THEN
-            IF (SPECI(N) == "SI+") THEN
-                Y0(72) = FRAC(7)*DPLT(7)
-                Y0(71) = 0.0
-            ELSE IF (SPECI(N) == "CL+") THEN
-                Y0(118) = FRAC(8)*DPLT(8)
-                Y0(117) = 0.0
-            ELSE
+                ! Set the elementral abundance to the
+                ! fractional abundance * depletion factor
                 Y0(N) = FRAC(M)*DPLT(M)
-            END IF
-            WRITE(*,*) "Y0(",N,")=",Y0(N)
           END IF
         END DO
-      END DO
 
-!-- Set the abundances
-!** Total abundances for H2 and H
-      fh = 0.0
-      Y0(1) = (0.5*(1.0e0-fh)) 
-      Y0(3) = 0.5*(0.5*(1.0e0-fh))
-      ! Y0(214) = (NOE(1)/DEN0) ! This is set according to the ionisation fraction
-      ! Y0(214) = 0.0
-      WRITE(*,*) "Y0(1)=",Y0(1)
-      WRITE(*,*) "Y0(3)=",Y0(3)
-      WRITE(*,*) "Y0(214)=",Y0(214)
-      ! Y0(IHI)=HFRAC
-!--Set H+ abundances
-    !   Y0(2)=0.25
-!--and ice mantle components, returned to the gas-phase
-!       XWATER=1.0D-8*FRM
-! !--H2O
-!       Y0(36)=1.0*XWATER
-! !--CO2
-!       Y0(149)=9.850E-10
-! !--CO
-!       Y0(65)=2.679E-07
-! !--CH4
-!       Y0(23)=4.137E-09
-! !--NH3
-!       Y0(31)=1.512E-09
-! !--H2CO
-!       Y0(84)=1.449E-10
-! !--CH3OH
-!       Y0(99)=3.223E-11
-! !--HCO+
-!       Y0(76)=1.00E-4
-
-      DO 1002 I=1,NSP
-        IF (Y0(I).GE.DEN0) THEN
-          WRITE(*,*) "I=",I
+        !-- Tweak further abundances
+        IF (SPECI(N) == "H") THEN
+            Y0(N) = (0.5*(1.0e0-fh)) 
+        ELSE IF (SPECI(N) == "H2") THEN
+            Y0(N) = 0.5*(0.5*(1.0e0-fh))
+        ELSE IF (SPECI(N) == "SI+") THEN
+            Y0(72) = FRAC(7)*DPLT(7)
+            Y0(71) = 0.0 ! This sets the Y0(Si) = 0
+        ELSE IF (SPECI(N) == "CL+") THEN
+            Y0(118) = FRAC(8)*DPLT(8)
+            Y0(117) = 0.0
         END IF
- 1002 CONTINUE
+
+        !-- Finds all ions and sums their abundance
+        DO J=1,25
+            IF ((SPECI(N)(J:J) .EQ. "+")) THEN
+                IONSUM = IONSUM + Y0(N)
+                WRITE(*,*) "IONSUM=",IONSUM
+            END IF
+        END DO
+        Y0(214) = IONSUM ! Set the initial abundance of ions and electrons to be equal
+      END DO
 ! 
 !--------------------------------------------------------
 !
 !--Set the density
       D=DEN0
       AV = ((1.25D-15*1.6D21)/DEN0)
-      T0=0.0
+      T0 = 0.0
       DG0=DG(1)
       TEN0=TEN(1)
 !
@@ -414,13 +380,13 @@ PROGRAM  WARDLE
       ITERP=0
 
 !** For LSODE
-      DATA ITOL,MF/1,22/
+      DATA ITOL,MF/1,10/
       JAC='DUMMY'
       ITASK=1
       IOPT=1
       IOTYP=0
       RTOL=1.0E-4
-      ATOL=RTOL*Y0
+      ATOL=1.0E-14*Y0
       WHERE(ATOL<1E-30) ATOL=1E-30 ! to a minimum degree
       MXSTEP=1.0E6
       OPTIONS = SET_OPTS(METHOD_FLAG=MF, ABSERR_VECTOR=ATOL, RELERR=RTOL, USER_SUPPLIED_JACOBIAN=.FALSE., MXSTEP=MXSTEP)
@@ -428,15 +394,36 @@ PROGRAM  WARDLE
 !---------------------------------INTEGRATION LOOP-------------------------------
       IRUN=0
       STATIC=1
-      TOUT = 1.0
+      TOUT = 1.0d-8
  23      IRUN=IRUN+1
          ! Set the physical conditions to variables for the integrator and
          ! adjust subroutine
-         IF ((TOUT/YEAR .LT. 10e6) .AND. (STATIC .EQ. 1)) THEN
-            TOUT = TOUT*10
-            IRUN = 1
-            WRITE(*,*) "AV=",AV
-         ELSE 
+         IF ((TOUT/YEAR .LT. 1e6) .AND. (STATIC .EQ. 1)) THEN
+            IRUN = 0   
+            ! TOUT = TOUT*10
+            IF (TOUT/YEAR .gt. 1.0d6) THEN !code in years for readability, TOUT in s
+                  TOUT=(TOUT/YEAR+1.0d4)*YEAR
+            ELSE  IF (TOUT/YEAR .gt. 1.0d5) THEN
+                  TOUT=(TOUT/YEAR+1.0d4)*YEAR
+            ELSE IF (TOUT/YEAR .gt. 1.0d4) THEN
+                  TOUT=(TOUT/YEAR+1000.0)*YEAR
+            ELSE IF (TOUT/YEAR .gt. 1000) THEN
+                  TOUT=(TOUT/YEAR+100.0)*YEAR
+            ELSE IF (TOUT/YEAR .gt. 0.0) THEN
+                  TOUT=(TOUT/YEAR*10.0)*YEAR
+            ELSE
+                  TOUT=3.16d7*10.d-8
+            ENDIF
+            DGOUT = DG(1)
+            TENOUT = TEN(1)
+            TDUST = TEN(1)
+            NONOUT = NON(1)
+            ISTATE=1
+            AV = ((1.25D-15*1.6D21)/NONOUT)
+            WRITE(*,*) "Y0=",Y0
+            WRITE(*,*) "TOUT=",TOUT/YEAR, irun
+            !WRITE(*,*) "TENOUT=",TENOUT
+         ELSE
             ! Otherwise use data
             TOUT = T_INTERP(IRUN)
             DGOUT = DG(IRUN)
@@ -461,23 +448,23 @@ PROGRAM  WARDLE
                     IF (SPECI(N)(1:1) .NE. "#") THEN
                         DO M=1,25
                             ! Scale the ion abundances
-                            IF ((SPECI(N)(M:M) .EQ. "+") .OR. (SPECI(N)(M:M) .EQ. "-")) THEN
-                                Y0(N) = (Y0(N)/86) * NOI(1)
+                            IF ((SPECI(N)(M:M) .EQ. "+")) THEN
+                                Y0(N) = (Y0(N)/IONSUM) * NOI(IRUN)
                             ELSE
-                                Y0(N) = DEN0 ! From UCLCHEM's chemistry.f90
+                                Y0(N) = 0.0 ! From UCLCHEM's chemistry.f90
                             END IF
                         END DO
-                    ELSE IF (SPECI(N)(1:1) .EQ. "#") THEN ! Set the solid state abundances 
-                        INDX = INDX + 1
-                        Y0(N) = 0.0
-                        SSTATE(INDX) = INT(N)
-                        MANTLE = MANTLE + Y0(N)
                     END IF
                 END DO
             END IF
          END IF
 
+        !  WRITE(*,*) "TOUT=",TOUT
+        !  WRITE(*,*) "TENOUT=",TENOUT
+        !  WRITE(*,*) "NONOUT=",NONOUT
+
          CALL DVODE_F90(DIFFUN, NTD, Y0, T0, TOUT, ITASK, ISTATE, OPTIONS)
+         IF (ISTATE.EQ.-1) CALL RESULT(IRUN,NTOT,IFULL,LOUT)
          IF(ISTATE.NE.2) WRITE(LRUN,201) ISTATE
 !--Store the results
          TAGE(IRUN)=TOUT/YEAR
@@ -510,7 +497,7 @@ PROGRAM  WARDLE
 !
 !***************** FOR USE BY INTEGRATOR WHEN CALLING DIFFUN ******************
 !
-      SUBROUTINE ADJUST(N,Y,YDOT)
+       SUBROUTINE ADJUST(N,Y,YDOT)
       IMPLICIT DOUBLE PRECISION(A-H,O-Z)
       PARAMETER(NRM=2345,NG=163,NS=51)
 !
@@ -620,50 +607,50 @@ PROGRAM  WARDLE
 !--H2 formation is dependent on GRATH (see above)
       RATE(IH2)=GRATH
       
-! ! Fraction of binding sites occupied by #CO 
-!       COCOV=Y(61)/FSITES
-!       COCOV=DMIN1(COCOV,1.D0)
-! ! Fraction of binding sites occupied by #CO2 
-!       CO2COV=Y(148)/FSITES
-!       CO2COV=DMIN1(CO2COV,1.D0)
-! ! Fraction of binding sites occupied by #CH4 
-!       CH4COV=Y(22)/FSITES
-!       CH4COV=DMIN1(CH4COV,1.D0)
-! !--surface chemistry control:
-!       IF(ISURF.EQ.1) THEN
-! !--conversion of CO2 and HCO2+ to #CO2
-!          RATE(2207)=FCO2*COCOV*RATE(2207)
-!       !    RATE(2239)=FCO2*COCOV*RATE(2239)
-! !--conversion of OH, H2O, O+, OH+, H2O+, H3O+ and O to #H2O
-!          RATE(2203)=FOX*(1.0-(FCO2*COCOV))*RATE(2203)
-!          RATE(2206)=FOX*(1.0-(FCO2*COCOV))*RATE(2206)
-!          RATE(2220)=FOX*(1.0-(FCO2*COCOV))*RATE(2219)
-!          RATE(2226)=FOX*(1.0-(FCO2*COCOV))*RATE(2225)
-!          RATE(2232)=FOX*(1.0-(FCO2*COCOV))*RATE(2225)
-!          RATE(2239)=FOX*(1.0-(FCO2*COCOV))*RATE(2238)
-!          RATE(2245)=FOX*(1.0-(FCO2*COCOV))*RATE(2244)
-!       ELSE
-!          ! This disables the surface chemistry if ISURF != 1
-!          DO 99 ISC=1,NS
-!             INDX = SSTATE(ISC)
-!             RATE(INDX)=0.0
-!  99      CONTINUE
-!       END IF
-! !
-! ! Desorption/evaporation reactions
-! ! Total surface coverage & net accretion rate (excluding negative terms)
-!       TOTS=0.0
-!       ACCR=0.0
-!       DO 7 I=1,NS
-!          TOTS=TOTS+Y(SSTATE(I))
-!          ACCR=ACCR+YDOT(SSTATE(I))
-!  7    CONTINUE
-!       COV=TOTS/FSITES
-!       ! WRITE(*,*) "==============="
-!       ! WRITE(*,*) "TOTS=",TOTS
-!       ! WRITE(*,*) "FSITES=",FSITES
-!       ! WRITE(*,*) "COV=",COV
-!       ! WRITE(*,*) "==============="
+! Fraction of binding sites occupied by #CO 
+      COCOV=Y(61)/FSITES
+      COCOV=DMIN1(COCOV,1.D0)
+! Fraction of binding sites occupied by #CO2 
+      CO2COV=Y(148)/FSITES
+      CO2COV=DMIN1(CO2COV,1.D0)
+! Fraction of binding sites occupied by #CH4 
+      CH4COV=Y(22)/FSITES
+      CH4COV=DMIN1(CH4COV,1.D0)
+!--surface chemistry control:
+      IF(ISURF.EQ.1) THEN
+!--conversion of CO2 and HCO2+ to #CO2
+         RATE(2207)=FCO2*COCOV*RATE(2207)
+      !    RATE(2239)=FCO2*COCOV*RATE(2239)
+!--conversion of OH, H2O, O+, OH+, H2O+, H3O+ and O to #H2O
+         RATE(2203)=FOX*(1.0-(FCO2*COCOV))*RATE(2203)
+         RATE(2206)=FOX*(1.0-(FCO2*COCOV))*RATE(2206)
+         RATE(2220)=FOX*(1.0-(FCO2*COCOV))*RATE(2219)
+         RATE(2226)=FOX*(1.0-(FCO2*COCOV))*RATE(2225)
+         RATE(2232)=FOX*(1.0-(FCO2*COCOV))*RATE(2225)
+         RATE(2239)=FOX*(1.0-(FCO2*COCOV))*RATE(2238)
+         RATE(2245)=FOX*(1.0-(FCO2*COCOV))*RATE(2244)
+      ELSE
+         ! This disables the surface chemistry if ISURF != 1
+         DO 99 ISC=1,NS
+            INDX = SSTATE(ISC)
+            RATE(INDX)=0.0
+ 99      CONTINUE
+      END IF
+!
+! Desorption/evaporation reactions
+! Total surface coverage & net accretion rate (excluding negative terms)
+      TOTS=0.0
+      ACCR=0.0
+      DO 7 I=1,NS
+         TOTS=TOTS+Y(SSTATE(I))
+         ACCR=ACCR+YDOT(SSTATE(I))
+ 7    CONTINUE
+      COV=TOTS/FSITES
+      ! WRITE(*,*) "==============="
+      ! WRITE(*,*) "TOTS=",TOTS
+      ! WRITE(*,*) "FSITES=",FSITES
+      ! WRITE(*,*) "COV=",COV
+      ! WRITE(*,*) "==============="
  
 ! H2 formation rate (=1/2 H-atom freeze-out rate)
       H2FORM=0.5*RATE(IH2)*Y(1)*D
@@ -754,7 +741,7 @@ PROGRAM  WARDLE
         !H2 formation should occur at both steps - however note that here there is no 
         !temperature dependence. y(nh) is hydrogen fractional abundance.
         nh=1 
-        nh=3
+        nh2=3
         YDOT(nh)  = ydot(nh) - 2.0*( h2form*y(nh)*D - h2dis*y(nh2) )
         !                             h2 formation - h2-photodissociation
         YDOT(nh2) = ydot(nh2) + h2form*y(nh)*D - h2dis*y(nh2)

@@ -19,7 +19,7 @@ import fileinput
 import itertools
 from Functions import *
 
-reactionFile = 'inputFiles/umist12.csv'
+reactionFile = 'inputFiles/RATE12.csv'
 reactionFile_grain = 'inputFiles/uclgrainbasic.csv'
 speciesFile = 'inputFiles/uclspeciesbasic.csv'
 

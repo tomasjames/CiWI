@@ -139,8 +139,8 @@ def filter_species(speciesList,reactionList):
 def add_desorb_reactions(speciesList,reactionList):
 	for species in speciesList:
 		if species.is_grain_species():
-			for reacType in ["DESCR","DEUVCR"]:
-				newReaction=Reaction([species.name,reacType,'NAN',species.name[1:],'NAN','NAN','NAN',1,0,species.bindener,0.0,10000.0])
+			for reacType in ["DES"]:
+				newReaction=Reaction([species.name,reacType,'NAN',species.name[1:],'NAN','NAN','NAN',1,species.mass,species.bindener,0.0,10000.0])
 				reactionList.append(newReaction)
 	return reactionList
 

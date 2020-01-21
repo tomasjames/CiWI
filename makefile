@@ -3,8 +3,11 @@ FC = gfortran
 FFLAGS = -O2 -fPIC -g -fno-align-commons
 #FFLAGS = -g -traceback -check all -fp-stack-check -debug all -warn -CB
 
-wardle: wardle.f90 dvode.o
-	${FC} ${FFLAGS} -o wardle wardle.f90 dvode.o
+wardle: wardle.f90 dvode.o densdot.o
+	${FC} ${FFLAGS} -o wardle wardle.f90 dvode.o densdot.o
+
+densdot.o: densdot.f90
+	${FC} ${FFLAGS} -c densdot.f90
 
 collfile.o: collfile.f
 	${FC} ${FFLAGS} collfile.f
