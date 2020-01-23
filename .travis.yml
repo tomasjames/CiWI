@@ -5,6 +5,7 @@ dist: trusty
 
 addons:
   apt:
+    sources: ubuntu-toolchain-r-test
     packages: gfortran-6
 
 before_install:
