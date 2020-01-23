@@ -22,14 +22,17 @@
 !
       IMPLICIT DOUBLE PRECISION(A-H,O-Z)
 !
-      PARAMETER(NSP=100,NEL=6,NCONS=2,NRM=1500,NOP=100)
+      PARAMETER(NSP=100,NEL=6,NCONS=2,NRM=1500,NOP=2331)
 !
       CHARACTER*8  RE1(NRM),RE2(NRM),P1(NRM),P2(NRM),P3(NRM),P4(NRM), &
                   & SPECI(NSP),SPX(NEL)
-      CHARACTER*25 UNIT2,UNIT3,UNIT7,UNIT8,UNITL
+      CHARACTER*25 UNIT2,UNIT3,UNIT7,UNIT8,DGFILE,TENFILE,RHONFILE, &
+            & RHOEFILE, RHOIFILE, UNITL
       REAL*8  Y0(NSP),FRAC(NEL),DPLT(NEL),TOTAL(NCONS),X(NCONS), &
             & K(NRM),TRAT(NRM,4),PRAT(NRM,4),DRAT(NRM,4),ERAT(NRM,4), &
             & B(NSP,NOP),TAGE(NOP)
+      REAL*8  TIME(NOP), DG(NOP), TEN(NOP), RHON(NOP), RHOE(NOP), &
+            & RHOI(NOP), NON(NOP), NOE(NOP), NOI(NOP), DUMMY(NOP)
       INTEGER INDR(NRM),ISPX(NEL)
 !
 !*& For LSODE
@@ -95,6 +98,12 @@
       UNITL='report.d'
       UNIT7='coll_specs.d'
       UNIT8='coll_rates.d'
+      DGFILE='data/original/dg.xq'
+      TENFILE='data/original/ten.xq'
+      RHONFILE='data/original/rhon.xq'
+      RHOEFILE='data/original/rhoe.xq'
+      RHOIFILE='data/original/rhoi.xq'
+
 !--ORDER  is called at time points: IT1,IT2,IT3,IT4.
 !-- IOTYP=0,1,2 (selected/gas-phase/full o/p)
       IT1=2
@@ -117,10 +126,7 @@
 !
       XFRAC=1.0D-20
       HFRAC=1.0/DEN0
-!
-      TMIN=1.0*YEAR
-      TMAX=1.0E7*YEAR
-      TINC=10.0**(0.1)
+
 !--Photochemistry parameters
       CRAT=1.3E-16
       DEFF=200.0
@@ -169,6 +175,35 @@
       FDES=1.0
       ISURF=1
 !-------------------- END OF INPUT PARAMETERS ---------------------------------
+!
+!
+!------------------------------------------------------------------------------
+!
+!    Read the data
+      OPEN(20,FILE=DGFILE,STATUS='OLD')
+      OPEN(21,FILE=TENFILE,STATUS='OLD')
+      OPEN(22,FILE=RHONFILE,STATUS='OLD')
+      OPEN(23,FILE=RHOEFILE,STATUS='OLD')
+      OPEN(24,FILE=RHOIFILE,STATUS='OLD')
+
+      DO i=1,NOP
+            READ(20,*) TIME(i),DG(i)
+            READ(21,*) DUMMY(i),TEN(i)
+            READ(22,*) DUMMY(i),RHON(i)
+            READ(23,*) DUMMY(i),RHOE(i)
+            READ(24,*) DUMMY(i),RHOI(i)
+
+!          Convert mass density to number density
+!          Note: this is the density of all of the neutral
+!          species (alongside electron and ions)
+!          n = rho/(mu*mh)
+           NON(i)=RHON(i)/(2*1.67D-24)
+           NOE(i)=RHOE(i)/(9.109D-28)
+           NOI(i)=RHOI(i)/(2*1.67D-24)
+      END DO
+!
+!------------------------------------------------------------------------------
+!
       OPEN(LOUT,FILE=UNIT3,STATUS='NEW')
 !--Write out the input parameters to the log file
       WRITE(LOUT,100)
@@ -335,26 +370,40 @@
       STATIC=1
       ISTATE=1
       IFC=1
+!
+!-- Define initial time conditions (i.e. T0 is the 
+!-- time that the integrator begins; TOUT is the
+!-- time that the integrator is integrating towards.)
       T0=0.0
-      TOUT=TMIN/TINC
-      WRITE(*,*) "TOUT=",TOUT/YEAR
+      TOUT=1.0
 !---------------------------------INTEGRATION LOOP-------------------------------
-      IRUN = 0
+      IRUN = 1
  23      IRUN = IRUN + 1
-          !-- Evolve the time statically if STATIC=1
+          !-- Evolve the simulation statically if STATIC=1
          IF ((TOUT/YEAR .LE. 1e6) .AND. (STATIC .EQ. 1)) THEN
             TOUT = (TOUT) * 10
             IRUN = 0
+            AV = ((1.25D-15*1.6D21)/NONOUT)
+            write(*,*) "static at t=",TOUT/YEAR," yrs"
          ELSE 
             IF (IRUN .EQ. 1) THEN
+                !-- Resets variables required for the integrator
                 T0 = 0.0
-                TOUT=TMIN/TINC
                 ISTATE = 1
                 STATIC = 0   
-                WRITE(*,*) "T0=0.0"
-                WRITE(*,*) "TOUT=",TOUT/YEAR
             END IF
-            TOUT=(TOUT*TINC)
+            
+            !-- This section of code iterates through the datafiles
+            !-- from the simulation defined above
+            !-- Index is set to (IRUN+1) to ensure TOUT is always
+            !-- 1 index greater than T0 (T0 being the time at IRUN)
+            TOUT = TIME(IRUN+1)
+            FDUST = DG(IRUN+1)
+            TGAS = TEN(IRUN+1)
+            TDUST = TEN(IRUN+1)
+            D = NON(IRUN+1)
+            AV = ((1.25D-15*1.6D21)/D)
+            WRITE(*,*) "T0=",T0/YEAR
             WRITE(*,*) "TOUT=",TOUT/YEAR
          END IF
          !-- Catch any abundances that drop below a minimum threshold
@@ -381,7 +430,7 @@
             CALL ORDER(NG,NTD,Y0,RORD,TORD)
          END IF
 !
-         IF(TOUT.LT.TMAX) GO TO 23
+         IF((IRUN+1).LT.NOP) GO TO 23
 !
  46   CLOSE(2)
       CALL RESULT(IRUN,NTOT,IFULL,LOUT)
@@ -558,7 +607,7 @@
 !-- Subroutine to write out the results ---------------------------------------
       SUBROUTINE RESULT(IRUN,NMAX,IFULL,LOUT)
       IMPLICIT DOUBLE PRECISION(A-H,O-Z)
-      PARAMETER(NSP=100,NOP=100)
+      PARAMETER(NSP=100,NOP=2331)
 !
       DIMENSION B(NSP,NOP),BL(NSP,NOP),TAGE(NOP)
       CHARACTER*8 SPECI(NSP)
