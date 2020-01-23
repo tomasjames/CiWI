@@ -14,8 +14,8 @@ mhd_n = mhd_rho[:,1]/(2*1.6737236e-24)
 # title = lines[19]
 
 time = wardle_output[:, 0]
-# dg_file = np.loadtxt('data/original/dg.xq', skiprows=3)
-# dg = dg_file[:,1]
+dg_file = np.loadtxt('data/original/dg.xq', skiprows=3)
+dg = dg_file[:,1]
 # species = wardle_output[0:, 1:]
 
 HCN = wardle_output[:, 1]
@@ -29,16 +29,16 @@ ELECTR = wardle_output[:, 7]
 
 fig,ax=plt.subplots()
 
-ax.loglog(10**time, 10**HCN, label=r"$HCN$",linewidth=1.0)
-ax.loglog(10**time, 10**HNC, label=r"$HNC$",linewidth=1.0)
-ax.loglog(10**time, 10**CO, label=r"$CS$",linewidth=1.0)
-ax.loglog(10**time, 10**NH3, label=r"$NH_{3}$",linewidth=1.0)
-ax.loglog(10**time, 10**OH, label=r"$S$",linewidth=1.0)
+ax.semilogy(10**time, 10**HCN, label=r"$HCN$",linewidth=1.0)
+ax.semilogy(10**time, 10**HNC, label=r"$HNC$",linewidth=1.0)
+ax.semilogy(10**time, 10**CO, label=r"$CS$",linewidth=1.0)
+ax.semilogy(10**time, 10**NH3, label=r"$NH_{3}$",linewidth=1.0)
+ax.semilogy(10**time, 10**OH, label=r"$S$",linewidth=1.0)
 ax.set_xlabel('t (yrs)')
 ax.set_ylabel(r'$X_{species}$')
 ax2=ax.twinx()
-# ax2.loglog(mhd_time/(3.154e7),dg,label="d:g",linestyle='--',linewidth=0.5)
-# ax2.set_ylabel('d:g')
+ax2.semilogy(mhd_time/(3.154e7),mhd_temp,label="T",linestyle='--',linewidth=0.5)
+ax2.set_ylabel('T (K)')
 h1, l1 = ax.get_legend_handles_labels()
 h2, l2 = ax2.get_legend_handles_labels()
 legend = ax.legend(h1+h2, l1+l2, loc='best')
