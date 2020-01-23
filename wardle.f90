@@ -30,7 +30,7 @@
             & RHOEFILE, RHOIFILE, UNITL
       REAL*8  Y0(NSP),FRAC(NEL),DPLT(NEL),TOTAL(NCONS),X(NCONS), &
             & K(NRM),TRAT(NRM,4),PRAT(NRM,4),DRAT(NRM,4),ERAT(NRM,4), &
-            & B(NSP,NOP),TAGE(NOP)
+            & B(NSP,NOP), TAGE(NOP)
       REAL*8  TIME(NOP), DG(NOP), TEN(NOP), RHON(NOP), RHOE(NOP), &
             & RHOI(NOP), NON(NOP), NOE(NOP), NOI(NOP), DUMMY(NOP)
       INTEGER INDR(NRM),ISPX(NEL)
@@ -42,7 +42,7 @@
       EXTERNAL DIFFUN
 !**
       COMMON/BLK1/SPECI
-      COMMON/BLK2/B,TAGE
+      COMMON/BLK2/B
       COMMON/BLK3/X,TOTAL,K,D
       COMMON/BLK4/TRAT,PRAT,DRAT,ERAT,ITR,IPR,IDR,IER,IH2
       COMMON/BLK5/IFC,ICOV,ISURF
@@ -375,16 +375,16 @@
 !-- time that the integrator begins; TOUT is the
 !-- time that the integrator is integrating towards.)
       T0=0.0
-      TOUT=1.0
+      TOUT=0.01
+      TSTATLIM=1e6
 !---------------------------------INTEGRATION LOOP-------------------------------
-      IRUN = 1
+      IRUN = 0
  23      IRUN = IRUN + 1
           !-- Evolve the simulation statically if STATIC=1
-         IF ((TOUT/YEAR .LE. 1e6) .AND. (STATIC .EQ. 1)) THEN
+         IF ((TOUT/YEAR .LE. TSTATLIM) .AND. (STATIC .EQ. 1)) THEN
             TOUT = (TOUT) * 10
             IRUN = 0
             AV = ((1.25D-15*1.6D21)/NONOUT)
-            write(*,*) "static at t=",TOUT/YEAR," yrs"
          ELSE 
             IF (IRUN .EQ. 1) THEN
                 !-- Resets variables required for the integrator
@@ -403,8 +403,8 @@
             TDUST = TEN(IRUN+1)
             D = NON(IRUN+1)
             AV = ((1.25D-15*1.6D21)/D)
-            WRITE(*,*) "T0=",T0/YEAR
-            WRITE(*,*) "TOUT=",TOUT/YEAR
+            ! WRITE(*,*) "T0=",T0/YEAR
+            ! WRITE(*,*) "TOUT=",TOUT/YEAR
          END IF
          !-- Catch any abundances that drop below a minimum threshold
          DO N = 1,NTOT
@@ -413,7 +413,7 @@
 !
          CALL DLSODE(DIFFUN,N,Y0,T0,TOUT,ITOL,RTOL,ATOL,ITASK, &
      &               ISTATE,IOPT,RWORK,LRW,IWORK,LIW,JAC,MF)
-         IF(ISTATE.NE.2) WRITE(LRUN,201) ISTATE
+         IF (ISTATE.NE.2) WRITE(LRUN,201) ISTATE
 !--Store the results
          TAGE(IRUN)=TOUT/YEAR
          B(1,IRUN)=X(1)
@@ -430,10 +430,13 @@
             CALL ORDER(NG,NTD,Y0,RORD,TORD)
          END IF
 !
+         !-- This is essentially the while condition, i.e. if
+         !-- IRUN+1 (i.e. the next datastep) is less than the
+         !-- file length, then go back to marker 23
          IF((IRUN+1).LT.NOP) GO TO 23
 !
  46   CLOSE(2)
-      CALL RESULT(IRUN,NTOT,IFULL,LOUT)
+      CALL RESULT(IRUN,NTOT,IFULL,LOUT,TAGE)
 !--     IF(IPLOT.EQ.1) CALL PLOT(IRUN,NTOT)
 !--     IF(IPLOT.EQ.0) CALL PLOT1(IRUN,NTOT)
       WRITE(LRUN,'('' Run completed.'')')
@@ -605,14 +608,14 @@
 !==============================================================================
 !
 !-- Subroutine to write out the results ---------------------------------------
-      SUBROUTINE RESULT(IRUN,NMAX,IFULL,LOUT)
+      SUBROUTINE RESULT(IRUN,NMAX,IFULL,LOUT,TAGE)
       IMPLICIT DOUBLE PRECISION(A-H,O-Z)
       PARAMETER(NSP=100,NOP=2331)
 !
       DIMENSION B(NSP,NOP),BL(NSP,NOP),TAGE(NOP)
       CHARACTER*8 SPECI(NSP)
       COMMON/BLK1/SPECI
-      COMMON/BLK2/B,TAGE
+      COMMON/BLK2/B
 !--List of selected species numbers (for reduced output)
 !-- [HCO+,HCO,CS,N2H+,NH3,C,OH,H2] +2 for conserved species
       DATA J1,J2,J3,J4,J5,J6,J7,J8/48,47,74,35,30,10,67,2/
