@@ -43,13 +43,14 @@
 !**
       COMMON/BLK1/SPECI
       COMMON/BLK2/B
-      COMMON/BLK3/X,TOTAL,K,D
+      COMMON/BLK3/X,TOTAL,K
       COMMON/BLK4/TRAT,PRAT,DRAT,ERAT,ITR,IPR,IDR,IER,IH2
       COMMON/BLK5/IFC,ICOV,ISURF
       COMMON/BLK6/DEN0,TEMP0,AV0
       COMMON/BLK8/GRAD,SAPH,YLD,YLD2,FSITES,G0,F0,FCR,YH,CRAT, &
      &            STICK0,STICKP,STICKN
       COMMON/BLK9/FCO2,COCOV,FOX,PHOH,H2SHL,COSHL,FFRZ,FDES
+      COMMON/BLK10/FDUST,TNEUT,DEN,AV
       COMMON/ORDER1/RE1,RE2,P1,P2,P3,P4
       COMMON/ORDER2/INDR,IOTYP
 !
@@ -176,7 +177,6 @@
       ISURF=1
 !-------------------- END OF INPUT PARAMETERS ---------------------------------
 !
-!
 !------------------------------------------------------------------------------
 !
 !    Read the data
@@ -218,7 +218,7 @@
      &   1X,'Extinction = ',1PE8.2,' magnitudes',/)
       WRITE(LOUT,103) ALBEDO,CRAT,DEFF,H2SHL,COSHL
  103  FORMAT(1X,'Albedo = ',1PE8.2,/, & 
-     &   1X,'Cosmi!--ray ionization rate = ',1PE8.2,' s-1',/, &
+     &   1X,'Cosmic ray ionization rate = ',1PE8.2,' s-1',/, &
      &   1X,'Default CRP-induced photolysis rate = ',1PE8.2,/, &
      &   1X,'H2 self-shielding factor = ',0PF5.3,/, &
      &   1X,'CO self-shielding factor = ',0PF5.3,/)
@@ -363,11 +363,12 @@
         Y0(ISPX(I)) = FRAC(ISPX(I))*(DPLT(ISPX(I)))
       END DO
 !
-!--Set the density
-      D=DEN0
+!--Set the density and temperature
+      DEN=DEN0
+      TGAS=TEMP0
 !
 !-- Set some flags for the integration process
-      STATIC=1
+      STATIC=0
       ISTATE=1
       IFC=1
 !
@@ -375,20 +376,24 @@
 !-- time that the integrator begins; TOUT is the
 !-- time that the integrator is integrating towards.)
       T0=0.0
-      TOUT=0.01
+      TOUT=1e-3
       TSTATLIM=1e6
 !---------------------------------INTEGRATION LOOP-------------------------------
-      IRUN = 0
+      IRUN = 1
  23      IRUN = IRUN + 1
-          !-- Evolve the simulation statically if STATIC=1
+          !-- Evolve the simulation statically for TSTATLIM yrs if STATIC=1
          IF ((TOUT/YEAR .LE. TSTATLIM) .AND. (STATIC .EQ. 1)) THEN
             TOUT = (TOUT) * 10
-            IRUN = 0
-            AV = ((1.25D-15*1.6D21)/NONOUT)
-         ELSE 
-            IF (IRUN .EQ. 1) THEN
+            FDUST = DG(1)
+            TNEUT = TEN(1)
+            TDUST = TEN(1)
+            DEN = NON(1)
+            AV = ((1.25D-15*1.6D21)/DEN)
+         ELSE
+            IF (STATIC .EQ. 1) THEN
                 !-- Resets variables required for the integrator
-                T0 = 0.0
+                T0 = TIME(1)
+                IRUN = 2
                 ISTATE = 1
                 STATIC = 0   
             END IF
@@ -397,15 +402,16 @@
             !-- from the simulation defined above
             !-- Index is set to (IRUN+1) to ensure TOUT is always
             !-- 1 index greater than T0 (T0 being the time at IRUN)
-            TOUT = TIME(IRUN+1)
-            FDUST = DG(IRUN+1)
-            TGAS = TEN(IRUN+1)
-            TDUST = TEN(IRUN+1)
-            D = NON(IRUN+1)
-            AV = ((1.25D-15*1.6D21)/D)
-            ! WRITE(*,*) "T0=",T0/YEAR
+            TOUT = TIME(IRUN)
+            FDUST = DG(IRUN)
+            TNEUT = TEN(IRUN)
+            TDUST = TEN(IRUN)
+            DEN = NON(IRUN)
+            AV = ((1.25D-15*1.6D21)/DEN)
+            WRITE(*,*) "TNEUT=",TNEUT
             ! WRITE(*,*) "TOUT=",TOUT/YEAR
          END IF
+
          !-- Catch any abundances that drop below a minimum threshold
          DO N = 1,NTOT
             IF (Y0(N) .lt. 1D-30) Y0(N) = 1D-30
@@ -433,7 +439,7 @@
          !-- This is essentially the while condition, i.e. if
          !-- IRUN+1 (i.e. the next datastep) is less than the
          !-- file length, then go back to marker 23
-         IF((IRUN+1).LT.NOP) GO TO 23
+         IF((IRUN).LT.NOP) GO TO 23
 !
  46   CLOSE(2)
       CALL RESULT(IRUN,NTOT,IFULL,LOUT,TAGE)
@@ -453,16 +459,28 @@
 !
       REAL*8 K(NRM),Y(N),YDOT(N),X(NCONS),TOTAL(NCONS), &
      &       TRAT(NRM,4),PRAT(NRM,4),DRAT(NRM,4),ERAT(NRM,4)
-      COMMON/BLK3/X,TOTAL,K,D
+      COMMON/BLK3/X,TOTAL,K
       COMMON/BLK4/TRAT,PRAT,DRAT,ERAT,ITR,IPR,IDR,IER,IH2
       COMMON/BLK5/IFC,ICOV,ISURF
       COMMON/BLK6/DEN0,TEMP0,AV0
       COMMON/BLK8/GRAD,SAPH,YLD,YLD2,FSITES,G0,F0,FCR,YH,CRAT, &
      &            STICK0,STICKP,STICKN
       COMMON/BLK9/FCO2,COCOV,FOX,PHOH,H2SHL,COSHL,FFRZ,FDES
+      COMMON/BLK10/FDUST,TNEUT,DEN,AV
 !
-      AV=AV0
+    !   AV=AV0
       IF(IFC.EQ.1) THEN
+!
+!================================= D:G RATIO ==============================
+!
+      SBIND=1.0E15
+      SAPH=FDUST*8.0E-21 ! Grain surface area per H nucleon (in cm2)
+      FSITES=SAPH*SBIND ! Number of binding sites per unit volume
+!
+!================================== DENSITY ===============================
+!
+      D=DEN
+!
 !================================ PHOTORATES ==============================
 !
       !    WRITE(*,*) "K=",K
@@ -476,7 +494,8 @@
          K(1066)=COSHL*K(1066)
 !========= TEMPERATURE-DEPENDENT RATES & GAS-GRAIN INTERACTIONS ==============
 !
-         TGAS=TEMP0
+         TGAS = TNEUT
+         WRITE(*,*) "TGAS=",TGAS
 !--Re-calculate temperature-dependent gas-phase rates
          TINV=1.0/TGAS
          T300=TGAS/300.0
@@ -518,7 +537,7 @@
 !--H2 formation always on
          K(IH2)=GRATH
       END IF
-      IFC=0
+      IFC=1
 !
 !-- Fraction of binding sites occupied by GCO 
       COCOV=Y(81)/FSITES

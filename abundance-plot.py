@@ -17,23 +17,23 @@ time = wardle_output[:, 0]
 dg_file = np.loadtxt('data/original/dg.xq', skiprows=3)
 dg = dg_file[:,1]
 # species = wardle_output[0:, 1:]
-
-HCN = wardle_output[:, 1]
-HNC = wardle_output[:, 2]
-CO = wardle_output[:, 3]
-H2O = wardle_output[:, 4]
+HCOp = wardle_output[:, 1]
+HCO = wardle_output[:, 2]
+CS = wardle_output[:, 3]
+N2Hp = wardle_output[:, 4]
 NH3 = wardle_output[:, 5]
-OH = wardle_output[:, 6]
-ELECTR = wardle_output[:, 7]
-# H2O = species[0:, 8]
+C = wardle_output[:, 6]
+S = wardle_output[:, 7]
+ELECTR = wardle_output[0:, 8]
 
 fig,ax=plt.subplots()
 
-ax.semilogy(10**time, 10**HCN, label=r"$HCN$",linewidth=1.0)
-ax.semilogy(10**time, 10**HNC, label=r"$HNC$",linewidth=1.0)
-ax.semilogy(10**time, 10**CO, label=r"$CS$",linewidth=1.0)
+ax.semilogy(10**time, 10**HCOp, label=r"$HCO+$",linewidth=1.0)
+ax.semilogy(10**time, 10**HCO, label=r"$HCO$",linewidth=1.0)
+ax.semilogy(10**time, 10**CS, label=r"$CS$",linewidth=1.0)
+ax.semilogy(10**time, 10**S, label=r"$S$",linewidth=1.0)
 ax.semilogy(10**time, 10**NH3, label=r"$NH_{3}$",linewidth=1.0)
-ax.semilogy(10**time, 10**OH, label=r"$S$",linewidth=1.0)
+ax.semilogy(10**time, 10**ELECTR, label=r"$E-$",linewidth=1.0)
 ax.set_xlabel('t (yrs)')
 ax.set_ylabel(r'$X_{species}$')
 ax2=ax.twinx()
