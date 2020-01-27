@@ -494,7 +494,7 @@ def is_H2_formation(reactants, products):
     return False
 
 def write_network_file(fileName,speciesList,reactionList):
-	openFile=open(fileName,"wb")
+	openFile=open(fileName,"w")
 	openFile.write("MODULE network\n    IMPLICIT NONE\n")
 	openFile.write("    integer, parameter :: nSpec={0}, nReac={1}\n".format(len(speciesList),len(reactionList)))
 
