@@ -9,3 +9,6 @@ data/
 *.d
 *.png
 *.jpeg
+
+*.o
+*.mod
