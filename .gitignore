@@ -4,6 +4,7 @@ tests/
 data/
 
 .DS_STORE
+wardle
 *.xq
 *_interp.dat
 *.d
