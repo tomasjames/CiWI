@@ -14,7 +14,7 @@ C
       CHARACTER*8 R1(NRM),R2(NRM),P1(NRM),P2(NRM),P3(NRM),P4(NRM),
      *            SPECI(NSP),SPSEL(NSEL),SPEC
       REAL*8 G(NRM),R(NRM),X(NSP),Y0(NSP),XS(NCONS),TOT(NCONS),FLAG(10)
-      INTEGER INDXJ(NRM),LAB(10) 
+      INTEGER INDXJ(NRM),LAB(10)
 C
       COMMON/BLK1/SPECI
       COMMON/BLK3/XS,TOT,R,D
@@ -2082,7 +2082,7 @@ C
      *        -K( 102)*Y(55 )*D -K( 103)*Y(56 )*D -K( 104)*Y(67 )*D 
      *        -K( 105)*Y(68 )*D -K( 106)*Y(70 )*D -K( 107)*Y(71 )*D 
      *        -K( 108)*Y(2  )*D -K( 143)*Y(3  )*D -K( 967)*X(2 )*D  
-     *        -K(1049) -K(1130)*D ))                             
+     *        -K(1049) -K(1130)*D ))                                
       YD( 1) = 
      *        +K(  71)*Y(7  )*X(1 )*D  +K(  81)*Y(1  )*Y(35 )*D  +K(
      *          89)*Y(1  )*Y(4  )*D  +K(  90)*Y(1  )*Y(7  )*D  +K(  
